@@ -1,0 +1,53 @@
+{
+  "name": "threejs-visualisers",
+  "version": "0.1.0",
+  "description": "Audio-reactive three.js visualisers \u2014 seven themes (Nebula, Warp, Horizon, Sound System, Smoke, Kaleidoscope, Paint) driven by a Web Audio AnalyserNode.",
+  "type": "module",
+  "license": "ISC",
+  "author": "Francisco Estanqueiro",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/festanqueiro/threejs-visualisers.git"
+  },
+  "keywords": [
+    "three",
+    "threejs",
+    "webgl",
+    "audio",
+    "visualizer",
+    "visualiser",
+    "music",
+    "web-audio"
+  ],
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/threejs-visualisers.js",
+  "module": "./dist/threejs-visualisers.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/threejs-visualisers.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "vite demo",
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "build:demo": "vite build demo --base ./ --outDir ../dist-demo --emptyOutDir",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepare": "npm run build"
+  },
+  "peerDependencies": {
+    "three": ">=0.160.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "three": "^0.186.1",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11"
+  }
+}

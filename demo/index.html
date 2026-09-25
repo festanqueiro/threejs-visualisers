@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>three.js visualisers</title>
+    <style>
+      :root {
+        --bg: #12151a;
+        --surface: rgba(18, 21, 26, 0.72);
+        --border: #2b3140;
+        --text: #e6e9ef;
+        --dim: #9aa3b2;
+        --accent: #2dd4bf;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #000; color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+      #stage { position: fixed; inset: 0; }
+      #panel {
+        position: fixed; left: 16px; right: 16px; bottom: 16px; margin: 0 auto; max-width: 980px;
+        display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+        padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px;
+        background: var(--surface); backdrop-filter: blur(10px); transition: opacity 400ms;
+      }
+      body.idle #panel { opacity: 0; }
+      .group { display: flex; flex-wrap: wrap; gap: 4px; }
+      button, label.file {
+        border: 1px solid var(--border); background: transparent; color: var(--text);
+        border-radius: 16px; padding: 6px 12px; cursor: pointer; font: inherit;
+      }
+      button.active { background: var(--accent); border-color: var(--accent); color: #0b0d12; }
+      label.file input { display: none; }
+      .spacer { flex: 1; }
+      .dim { color: var(--dim); }
+      #options { display: flex; flex-wrap: wrap; gap: 10px; }
+      audio { height: 32px; max-width: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="panel">
+      <div class="group" id="themes"></div>
+      <div id="options"></div>
+      <div class="spacer"></div>
+      <label class="file">Play a file<input id="file" type="file" accept="audio/*,video/*" /></label>
+      <button id="mic">Use microphone</button>
+      <button id="fullscreen">Fullscreen</button>
+      <audio id="audio" controls hidden></audio>
+      <span id="hint" class="dim">Pick an audio file or use your microphone. Keys 1–7 switch themes.</span>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
