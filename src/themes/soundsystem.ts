@@ -96,7 +96,7 @@ const OPTIONS: ThemeOption[] = [
     name: 'Stack',
     values: [
       { id: 'classic', name: 'Classic' },
-      { id: 'mb', name: 'SYSTEM MB' },
+      { id: 'mb', name: 'Mais Baixo' },
     ],
   },
   {
@@ -226,7 +226,7 @@ function drawGrain(ctx: CanvasRenderingContext2D, w: number, h: number, random: 
 // telegraphing through it, and chips/scratches back to bare wood. Returns
 // the colour map plus the grain as a bump map, so the sun picks out the
 // relief.
-// `chips` adds chips/scratches back to bare wood — off for the SYSTEM MB
+// `chips` adds chips/scratches back to bare wood — off for the Mais Baixo
 // model, whose UVs stretch a small patch of texture over whole panels and
 // blow the chips up into big brown blotches.
 function paintedWood(
@@ -1094,7 +1094,7 @@ function create(): ThemeInstance {
   }
   const boxes: Box[] = []
   // `position`/`velocity` are the bass drivers' spring state (see update).
-  // `driver` is absent for a "virtual" driver — the SYSTEM MB bins are
+  // `driver` is absent for a "virtual" driver — the Mais Baixo bins are
   // folded horns whose driver is hidden inside, but their spring still
   // drives the box recoil and pressure rings.
   interface DriverEntry {
@@ -1121,7 +1121,7 @@ function create(): ThemeInstance {
 
   // Everything a stack animates, so update() can drive whichever stack is
   // showing (see setStack). The classic stack's rig is filled in below as
-  // it's built; SYSTEM MB's is built when its model loads.
+  // it's built; Mais Baixo's is built when its model loads.
   interface Rig {
     group: THREE.Group
     drivers: DriverEntry[]
@@ -1309,7 +1309,7 @@ function create(): ThemeInstance {
   const spectrum = new SpectrumBars(5, 30, 16000)
   const bandAverages = new Float32Array(5)
 
-  // --- SYSTEM MB: a stack loaded from a Blender model ------------------------
+  // --- Mais Baixo: a stack loaded from a Blender model ------------------------
   // Exported from SYSTEM_MB.blend by scripts/blender/export-system-mb.py:
   // four folded-horn bins (bin_1..4), two mid/top boxes (top_1, top_2) each
   // with a column of small horns (horns_1, horns_2) and a grilled driver
@@ -1482,7 +1482,7 @@ function create(): ThemeInstance {
         undefined,
         (error) => {
           modelLoading = false
-          console.error('failed to load the SYSTEM MB model', error)
+          console.error('failed to load the Mais Baixo model', error)
         },
       )
     }
