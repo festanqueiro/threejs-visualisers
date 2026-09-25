@@ -1,6 +1,6 @@
 import type * as THREE from 'three'
 
-export type VisualizerThemeId = 'nebula' | 'warp' | 'horizon' | 'soundsystem' | 'smoke' | 'kaleidoscope' | 'paint'
+export type VisualizerThemeId = 'nebula' | 'warp' | 'horizon' | 'soundsystem' | 'smoke' | 'kaleidoscope' | 'paint' | 'spacecat'
 
 // Everything a theme needs from the audio for one frame. Computed once
 // by the Visualizer shell (so themes don't each redo band/beat analysis),

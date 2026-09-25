@@ -8,6 +8,7 @@ export { soundSystemTheme } from './themes/soundsystem'
 export { smokeTheme } from './themes/smoke'
 export { kaleidoscopeTheme } from './themes/kaleidoscope'
 export { paintTheme } from './themes/paint'
+export { spaceCatTheme } from './themes/spacecat'
 export {
   analyserFromMediaElement,
   analyserFromMediaStream,
