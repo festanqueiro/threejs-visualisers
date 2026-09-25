@@ -12,6 +12,8 @@ Seven audio-reactive visualisers for the web, built on [three.js](https://threej
 | **Kaleidoscope** | Mirrored wedges of neon rings lit by the spectrum; kicks punch the zoom and flick the mirrors | Mirrors, Colours |
 | **Paint** | Paint flung at a black wall: splats on the kicks, bright whips on the mids and highs, fading to dark stains | Colours |
 
+**Live demo: https://festanqueiro.github.io/threejs-visualisers/** (play an audio file or use your microphone).
+
 These started life in [MCO](https://github.com/festanqueiro/music-collection-organizer), a DJ's music collection organiser.
 
 ## Try it
