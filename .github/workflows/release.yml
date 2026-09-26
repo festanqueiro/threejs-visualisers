@@ -1,0 +1,52 @@
+# On every push to main: bump the patch version, tag it and publish a GitHub release.
+# If the push already bumped package.json to an untagged version, that version is used as-is.
+# Pushes made with GITHUB_TOKEN don't trigger workflows, so the bump commit won't loop.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and tag
+        id: version
+        run: |
+          current="v$(node -p "require('./package.json').version")"
+          if git rev-parse -q --verify "refs/tags/$current" >/dev/null; then
+            npm version patch --no-git-tag-version --ignore-scripts >/dev/null
+            version="v$(node -p "require('./package.json').version")"
+            git commit -am "chore: release $version"
+            git push origin HEAD:main
+          else
+            version="$current"
+          fi
+          git tag -a "$version" -m "$version"
+          git push origin "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.version.outputs.version }}" --generate-notes --verify-tag
