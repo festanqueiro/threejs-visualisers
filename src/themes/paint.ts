@@ -1,19 +1,18 @@
 import * as THREE from 'three'
-import { NOISE_GLSL, disposeScene } from '../shared'
+import { disposeScene } from '../shared'
 import type { AudioFrame, ThemeInstance, ThemeOption, VisualizerTheme } from '../types'
 
-// Paint flung at a black wall. Kicks throw big splats (a ragged blob with
-// spikes and flecks around it); mids and highs whip out thin bright
-// strokes that draw themselves on in a fraction of a second. Everything
-// sinks from bright to a dark stain and then fades, so the wall keeps a
-// dim history of the last few bars under the fresh paint.
+// Paint flicked at a black wall in thin, wiggling strokes that draw
+// themselves on in a fraction of a second. Kicks flick a stroke (two on a
+// heavy one) and the mids and highs keep a steady stream coming. Each
+// stroke sinks from bright to a dark stain and then fades, so the wall
+// keeps a dim history of the last few bars under the fresh paint.
 //
 // Drawn in screen space: y runs -1..1, x runs -aspect..aspect, and the
 // vertex shaders map that straight to clip space (the theme's camera is
 // unused beyond carrying the aspect ratio). Newer paint draws on top via
 // renderOrder.
 
-const MAX_SPLATS = 36
 const MAX_STROKES = 40
 const STROKE_POINTS = 48
 
@@ -24,31 +23,6 @@ void main() {
   vUv = uv;
   vec4 world = modelMatrix * vec4(position, 1.0);
   gl_Position = vec4(world.x / uAspect, world.y, 0.0, 1.0);
-}
-`
-
-const SPLAT_FRAGMENT_SHADER = /* glsl */ `
-uniform vec3 uColour;
-uniform float uBrightness;
-uniform float uOpacity;
-uniform float uSeed;
-varying vec2 vUv;
-${NOISE_GLSL}
-void main() {
-  vec2 p = vUv * 2.0 - 1.0;
-  float r = length(p);
-  float a = atan(p.y, p.x);
-  // Ragged rim: a lumpy outline plus sharp spikes where paint sprayed out.
-  float rim = 0.36 + 0.14 * valueNoise(vec2(a * 2.0 + uSeed, uSeed))
-            + 0.08 * valueNoise(vec2(a * 7.0 + uSeed * 1.7, 3.0))
-            + 0.45 * pow(valueNoise(vec2(a * 5.0 + uSeed * 3.1, 7.0)), 9.0);
-  float body = smoothstep(rim, rim - 0.02, r);
-  // Flecks thrown clear of the main splat.
-  float fleck = step(0.95, valueNoise(p * 11.0 + uSeed * 5.0)) * smoothstep(1.0, 0.55, r) * step(rim, r);
-  float alpha = max(body, fleck) * uOpacity;
-  if (alpha < 0.01) discard;
-  float grain = 0.85 + 0.15 * valueNoise(p * 6.0 + uSeed);
-  gl_FragColor = vec4(uColour * uBrightness * grain, alpha);
 }
 `
 
@@ -95,7 +69,6 @@ function makeMaterial(fragmentShader: string, aspect: { value: number }): THREE.
       uColour: { value: new THREE.Color() },
       uBrightness: { value: 1 },
       uOpacity: { value: 0 },
-      uSeed: { value: 0 },
       uReveal: { value: 0 },
     },
     vertexShader: SCREEN_VERTEX_SHADER,
@@ -147,17 +120,7 @@ function create(): ThemeInstance {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 10)
   const aspect = { value: 16 / 9 }
-  const splatGeometry = new THREE.PlaneGeometry(1, 1)
 
-  const splats: Mark[] = []
-  for (let i = 0; i < MAX_SPLATS; i++) {
-    const material = makeMaterial(SPLAT_FRAGMENT_SHADER, aspect)
-    const mesh = new THREE.Mesh(splatGeometry, material)
-    mesh.frustumCulled = false
-    mesh.visible = false
-    scene.add(mesh)
-    splats.push({ mesh, material, age: 0, alive: false })
-  }
   const strokes: Mark[] = []
   for (let i = 0; i < MAX_STROKES; i++) {
     const material = makeMaterial(STROKE_FRAGMENT_SHADER, aspect)
@@ -171,7 +134,6 @@ function create(): ThemeInstance {
   let colours = 'yellow'
   let hue = 0
   let order = 0
-  let nextSplat = 0
   let nextStroke = 0
   let strokeBudget = 0
   let idleBudget = 0
@@ -180,22 +142,6 @@ function create(): ThemeInstance {
     if (colours === 'yellow') target.setHSL(0.155 + (Math.random() - 0.5) * 0.03, 0.95, 0.5)
     else if (colours === 'mixed') target.setHSL(Math.random(), 0.9, 0.5)
     else target.setHSL((hue + (Math.random() - 0.5) * 0.08 + 1) % 1, 0.9, 0.5)
-  }
-
-  function throwSplat(size: number): void {
-    const mark = splats[nextSplat]
-    nextSplat = (nextSplat + 1) % MAX_SPLATS
-    const { mesh, material } = mark
-    mesh.position.set((Math.random() * 2 - 1) * aspect.value * 0.85, (Math.random() * 2 - 1) * 0.8, 0)
-    // Stretched along the direction it was thrown.
-    mesh.rotation.z = Math.random() * Math.PI * 2
-    mesh.scale.set(size * (1.1 + Math.random() * 0.6), size * (0.8 + Math.random() * 0.3), 1)
-    mesh.renderOrder = order++
-    mesh.visible = true
-    paintColour(material.uniforms.uColour.value)
-    material.uniforms.uSeed.value = Math.random() * 100
-    mark.age = 0
-    mark.alive = true
   }
 
   function flickStroke(): void {
@@ -216,9 +162,8 @@ function create(): ThemeInstance {
     hue = frame.hue
 
     if (beat) {
-      // Not every kick throws a splat, or the wall fills up in seconds.
-      if (Math.random() < 0.6) throwSplat(0.35 + bass * 0.55 + Math.random() * 0.25)
       flickStroke()
+      if (bass > 0.6) flickStroke()
     }
     strokeBudget += dt * (mid * 1.2 + high * 1.8)
     // With nothing playing, still the odd throw so the wall isn't empty.
@@ -229,27 +174,10 @@ function create(): ThemeInstance {
     }
     if (idleBudget >= 1) {
       idleBudget = 0
-      if (bass + mid + high < 0.05) {
-        throwSplat(0.4 + Math.random() * 0.4)
-        flickStroke()
-      }
+      if (bass + mid + high < 0.05) flickStroke()
     }
 
-    // Splats: flash bright, sink to a dark stain within a couple of
-    // seconds, then fade out over the next several.
-    for (const mark of splats) {
-      if (!mark.alive) continue
-      mark.age += dt
-      const u = mark.material.uniforms
-      u.uBrightness.value = 0.1 + 0.55 * Math.exp(-mark.age * 2.2)
-      u.uOpacity.value = Math.min(1, mark.age * 30) * Math.exp(-mark.age * 0.4)
-      if (u.uOpacity.value < 0.02) {
-        mark.alive = false
-        mark.mesh.visible = false
-      }
-    }
-    // Strokes: draw on fast, stay hot briefly, then dim and fade quicker
-    // than splats.
+    // Strokes: draw on fast, stay hot briefly, then dim and fade.
     for (const mark of strokes) {
       if (!mark.alive) continue
       mark.age += dt
@@ -269,10 +197,7 @@ function create(): ThemeInstance {
     scene,
     camera,
     update,
-    dispose: () => {
-      splatGeometry.dispose()
-      disposeScene(scene)
-    },
+    dispose: () => disposeScene(scene),
     setOption: (optionId, valueId) => {
       if (optionId === 'colours') colours = valueId
     },

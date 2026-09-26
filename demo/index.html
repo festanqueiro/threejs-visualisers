@@ -16,13 +16,33 @@
       * { box-sizing: border-box; }
       html, body { margin: 0; height: 100%; background: #000; color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
       #stage { position: fixed; inset: 0; }
-      #panel {
-        position: fixed; left: 16px; right: 16px; bottom: 16px; margin: 0 auto; max-width: 980px;
-        display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-        padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px;
-        background: var(--surface); backdrop-filter: blur(10px); transition: opacity 400ms;
+      .panel {
+        position: fixed; border: 1px solid var(--border); border-radius: 12px;
+        background: var(--surface); backdrop-filter: blur(10px);
+        transition: opacity 400ms, transform 400ms;
       }
-      body.idle #panel { opacity: 0; }
+      /* Theme chooser: a column on the left that drops in from the top. */
+      #themes {
+        top: 16px; left: 16px; display: flex; flex-direction: column; gap: 4px; padding: 8px;
+        animation: drop-in 500ms ease-out;
+      }
+      @keyframes drop-in { from { transform: translateY(calc(-100% - 16px)); } }
+      #themes button { text-align: left; }
+      /* A theme's sub options open to the right of the chosen theme. */
+      #options {
+        top: 16px; left: 16px; display: flex; flex-direction: column; gap: 10px; padding: 10px 12px;
+        max-width: min(420px, calc(100vw - 32px));
+      }
+      #options[hidden] { display: none; }
+      #options .label { color: var(--dim); margin-bottom: 4px; }
+      /* Bottom bar: audio sources and fullscreen only. */
+      #bar {
+        left: 16px; right: 16px; bottom: 16px; margin: 0 auto; width: fit-content; max-width: calc(100vw - 32px);
+        display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; padding: 10px 14px;
+      }
+      body.idle .panel { opacity: 0; pointer-events: none; }
+      body.idle #themes { transform: translateY(-12px); }
+      body.idle #bar { transform: translateY(12px); }
       .group { display: flex; flex-wrap: wrap; gap: 4px; }
       button, label.file {
         border: 1px solid var(--border); background: transparent; color: var(--text);
@@ -30,23 +50,21 @@
       }
       button.active { background: var(--accent); border-color: var(--accent); color: #0b0d12; }
       label.file input { display: none; }
-      .spacer { flex: 1; }
       .dim { color: var(--dim); }
-      #options { display: flex; flex-wrap: wrap; gap: 10px; }
       audio { height: 32px; max-width: 100%; }
     </style>
   </head>
   <body>
     <div id="stage"></div>
-    <div id="panel">
-      <div class="group" id="themes"></div>
-      <div id="options"></div>
-      <div class="spacer"></div>
+    <nav id="themes" class="panel" aria-label="Themes"></nav>
+    <div id="options" class="panel" hidden></div>
+    <div id="bar" class="panel">
       <label class="file">Play a file<input id="file" type="file" accept="audio/*,video/*" /></label>
       <button id="mic">Use microphone</button>
+      <button id="tab">Share tab audio</button>
       <button id="fullscreen">Fullscreen</button>
       <audio id="audio" controls hidden></audio>
-      <span id="hint" class="dim">Pick an audio file or use your microphone. Keys 1–7 switch themes.</span>
+      <span id="hint" class="dim">Play a file, use your microphone or share a tab's audio. Keys 1–8 switch themes.</span>
     </div>
     <script type="module" src="./main.ts"></script>
   </body>
