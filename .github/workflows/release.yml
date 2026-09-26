@@ -1,6 +1,7 @@
-# On every push to main: bump the patch version, tag it and publish a GitHub release.
-# If the push already bumped package.json to an untagged version, that version is used as-is.
-# Pushes made with GITHUB_TOKEN don't trigger workflows, so the bump commit won't loop.
+# On every push to main: tag the pushed commit with the next patch version and
+# publish a GitHub release for it. main only takes changes through pull requests,
+# so nothing is committed back; package.json's version is only a floor — bump it
+# in a PR (e.g. to 0.2.0) to jump ahead, otherwise the latest tag's patch goes up.
 name: Release
 
 on:
@@ -21,32 +22,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
 
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Bump version and tag
+      - name: Pick the next version
         id: version
         run: |
-          current="v$(node -p "require('./package.json').version")"
-          if git rev-parse -q --verify "refs/tags/$current" >/dev/null; then
-            npm version patch --no-git-tag-version --ignore-scripts >/dev/null
-            version="v$(node -p "require('./package.json').version")"
-            git commit -am "chore: release $version"
-            git push origin HEAD:main
+          package="$(node -p "require('./package.json').version")"
+          latest="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sed 's/^v//' | sort -V | tail -n1)"
+          if [ -z "$latest" ] || [ "$(printf '%s\n%s\n' "$latest" "$package" | sort -V | tail -n1)" != "$latest" ]; then
+            next="$package"
           else
-            version="$current"
+            IFS=. read -r major minor patch <<< "$latest"
+            next="$major.$minor.$((patch + 1))"
           fi
-          git tag -a "$version" -m "$version"
-          git push origin "$version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "version=v$next" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub release
+      - name: Tag and release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ steps.version.outputs.version }}" --generate-notes --verify-tag
+        run: gh release create "${{ steps.version.outputs.version }}" --target "$GITHUB_SHA" --title "${{ steps.version.outputs.version }}" --generate-notes
