@@ -1,6 +1,6 @@
 # three.js visualisers
 
-Seven audio-reactive visualisers for the web, built on [three.js](https://threejs.org). Give them a Web Audio `AnalyserNode` (from an `<audio>` element, a microphone or any audio graph) and they react to the bass, mids, highs and kicks.
+Eight audio-reactive visualisers for the web, built on [three.js](https://threejs.org). Give them a Web Audio `AnalyserNode` (from an `<audio>` element, a microphone or any audio graph) and they react to the bass, mids, highs and kicks.
 
 | Theme | What it looks like | Options |
 | --- | --- | --- |
@@ -10,7 +10,8 @@ Seven audio-reactive visualisers for the web, built on [three.js](https://threej
 | **Sound System** | A Jamaican-style sound system stack; cones pump, boxes shake, pressure rings pulse | Stack, Colours, Background |
 | **Smoke** | A smoky club: smoke rolling up from a lamp that pumps with the kick, stage beams cutting through it | Colours |
 | **Kaleidoscope** | Mirrored wedges of neon rings lit by the spectrum; kicks punch the zoom and flick the mirrors | Mirrors, Colours |
-| **Paint** | Paint flung at a black wall: splats on the kicks, bright whips on the mids and highs, fading to dark stains | Colours |
+| **Paint** | Paint flicked at a black wall in thin wiggling strokes, driven by the kicks, mids and highs, fading to dark stains | Colours |
+| **LO-RES** | A 90s demoscene plasma in big, dithered pixels and a handful of colours; bass warps it, kicks jump it | Palette |
 
 **Live demo: https://festanqueiro.github.io/threejs-visualisers/** (play an audio file or use your microphone).
 
@@ -25,7 +26,7 @@ npm install
 npm run dev
 ```
 
-Open the printed URL, then play an audio file or use your microphone. Keys 1–7 switch themes.
+Open the printed URL, then play an audio file or use your microphone. Keys 1–8 switch themes.
 
 ## Use it in your project
 

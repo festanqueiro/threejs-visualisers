@@ -5,6 +5,7 @@ import { soundSystemTheme } from './soundsystem'
 import { smokeTheme } from './smoke'
 import { kaleidoscopeTheme } from './kaleidoscope'
 import { paintTheme } from './paint'
+import { loresTheme } from './lores'
 import type { VisualizerTheme, VisualizerThemeId } from '../types'
 
 // Every built-in theme, in picker order.
@@ -16,6 +17,7 @@ export const VISUALIZER_THEMES: VisualizerTheme[] = [
   smokeTheme,
   kaleidoscopeTheme,
   paintTheme,
+  loresTheme,
 ]
 
 export function getVisualizerTheme(id: VisualizerThemeId): VisualizerTheme {
