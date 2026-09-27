@@ -57,6 +57,8 @@
       }
       button.active { background: var(--accent); border-color: var(--accent); color: #0b0d12; }
       label.file input { display: none; }
+      select { border: 1px solid var(--border); background: transparent; color: var(--text); border-radius: 16px; padding: 6px 10px; font: inherit; }
+      select option { background: #0b0d12; }
       .dim { color: var(--dim); }
       audio { height: 32px; max-width: 100%; }
     </style>
@@ -73,6 +75,7 @@
       <label class="file">Play a file<input id="file" type="file" accept="audio/*,video/*" /></label>
       <button id="mic">Use microphone</button>
       <button id="tab">Share tab audio</button>
+      <select id="fps" title="Frame rate"></select>
       <button id="fullscreen">Fullscreen</button>
       <audio id="audio" controls hidden></audio>
       <span id="hint" class="dim">Play a file, use your microphone or share a tab's audio. Keys 1–8 switch themes.</span>

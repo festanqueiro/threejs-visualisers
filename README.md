@@ -64,11 +64,13 @@ playButton.addEventListener('click', () => {
   - `themeOptions`: starting option values, e.g. `{ mirrors: '12' }`.
   - `pixelRatio`: defaults to `min(devicePixelRatio, 2)`.
   - `autoStart`: defaults to `true`.
-- **Methods:** `setTheme(id, options?)`, `setOption(optionId, valueId)`, `setAnalyser(source)`, `start()`, `stop()` and `dispose()`.
-- **Getters:** `theme` and `themeOptions`.
+  - `fps`: a frame-rate cap, default `30` (`DEFAULT_FPS`) to go easy on the GPU. `0` renders every display refresh.
+- **Methods:** `setTheme(id, options?)`, `setOption(optionId, valueId)`, `setAnalyser(source)`, `setFps(fps)`, `start()`, `stop()` and `dispose()`.
+- **Getters:** `theme`, `themeOptions` and `fps`.
+- **`FPS_CHOICES`**: the frame rates worth offering in a picker (15, 24, 30, 60 and Max), with labels.
 - **`VISUALIZER_THEMES`**: every theme, with its `id`, `name` and `options`. Use it to build a picker.
 - **`analyserFromMediaElement(element, context?)`** and **`analyserFromMediaStream(stream, context?)`**: tap an `<audio>`/`<video>` element or a `MediaStream` (such as a microphone) with an analyser set up the way the themes expect. A media element can only be tapped once, so keep the result.
-- **`VisualizerEngine`**: the renderer without the loop, for driving frames yourself, rendering off-screen or recording a canvas. Call `render()` whenever you want a frame.
+- **`VisualizerEngine`**: the renderer without the loop, for driving frames yourself, rendering off-screen or recording a canvas. Call `render()` whenever you want a frame. To cap your own loop, check `new FrameLimiter(fps).shouldRender(now)` on each animation frame.
 
 ### Writing your own theme
 
@@ -77,6 +79,7 @@ A theme is `{ id, name, create, options? }`. `create()` returns a scene, a camer
 ## Notes
 
 - The library is one ES module of about 1 MB. Most of that is the Sound System's 3D model, inlined so you don't need any asset configuration.
+- The themes and the audio smoothing follow each frame's real duration, so they move at the same speed at any frame rate.
 - Everything runs on the GPU. Smoke and Kaleidoscope are full-screen shaders, so on 4K or 5K displays keep `pixelRatio` at 1–2.
 
 ## License

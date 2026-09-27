@@ -69,6 +69,19 @@ describe('BeatDetector', () => {
     expect(detector.update(0.9, (t += 16))).toBe(true)
     expect(detector.update(0.95, (t += 16))).toBe(false)
   })
+  it('averages over the same time at 30 fps as at 60', () => {
+    // One second at 0.3, then a second at 0.6: the average lags the same
+    // at either rate, so a 0.8 hit right after is judged the same way.
+    const at = (fps: number) => {
+      const detector = new BeatDetector()
+      const step = 1000 / fps
+      let t = 0
+      for (let i = 0; i < fps; i++) detector.update(0.3, (t += step))
+      for (let i = 0; i < fps / 4; i++) detector.update(0.6, (t += step))
+      return detector.update(0.8, (t += 300))
+    }
+    expect(at(30)).toBe(at(60))
+  })
 })
 
 describe('logBinRanges', () => {
@@ -94,5 +107,12 @@ describe('follow', () => {
   it('rises by the attack factor and falls by the release factor', () => {
     expect(follow(0, 1, 0.5, 0.1)).toBeCloseTo(0.5)
     expect(follow(1, 0, 0.5, 0.1)).toBeCloseTo(0.9)
+  })
+
+  it('moves as far in one 30 fps frame as in two 60 fps ones', () => {
+    const twice = follow(follow(1, 0, 0.5, 0.1), 0, 0.5, 0.1)
+    expect(follow(1, 0, 0.5, 0.1, 1 / 30)).toBeCloseTo(twice)
+    const rising = follow(follow(0, 1, 0.5, 0.1), 1, 0.5, 0.1)
+    expect(follow(0, 1, 0.5, 0.1, 1 / 30)).toBeCloseTo(rising)
   })
 })

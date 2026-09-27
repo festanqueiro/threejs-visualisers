@@ -1,4 +1,5 @@
 import { VisualizerEngine, type AnalyserSource } from './engine'
+import { FrameLimiter } from './frameLimiter'
 import { VISUALIZER_THEMES, getVisualizerTheme } from './themes'
 import type { ThemeInstance, VisualizerTheme, VisualizerThemeId } from './types'
 
@@ -13,6 +14,9 @@ export interface VisualizerOptions {
   pixelRatio?: number
   // Start rendering right away (default true).
   autoStart?: boolean
+  // Frame-rate cap (default 30, to go easy on the GPU); 0 for none, every
+  // display refresh renders. See FPS_CHOICES for a picker.
+  fps?: number
 }
 
 // The batteries-included way to use the visualisers: fills `container`
@@ -29,6 +33,7 @@ export class Visualizer {
   private options: Record<string, string> = {}
   private raf = 0
   private running = false
+  private limiter: FrameLimiter
   private resizeObserver: ResizeObserver
 
   constructor(
@@ -50,6 +55,7 @@ export class Visualizer {
     )
     this.resizeObserver.observe(container)
 
+    this.limiter = new FrameLimiter(options.fps)
     this.themeId = getVisualizerTheme(options.theme ?? VISUALIZER_THEMES[0].id).id
     this.setTheme(this.themeId, options.themeOptions)
     if (options.autoStart !== false) this.start()
@@ -92,15 +98,25 @@ export class Visualizer {
     this.engine.setAnalyser(source)
   }
 
+  // The frame-rate cap (0: none).
+  get fps(): number {
+    return this.limiter.fps
+  }
+
+  // Changes the frame-rate cap while running; 0 removes it.
+  setFps(fps: number): void {
+    this.limiter.fps = fps
+  }
+
   start(): void {
     if (this.running) return
     this.running = true
-    const tick = () => {
+    const tick = (now: number) => {
       if (!this.running) return
       this.raf = requestAnimationFrame(tick)
-      this.engine.render()
+      if (this.limiter.shouldRender(now)) this.engine.render(now)
     }
-    tick()
+    tick(performance.now())
   }
 
   stop(): void {
