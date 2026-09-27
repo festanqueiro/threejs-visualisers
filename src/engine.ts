@@ -103,7 +103,8 @@ export class VisualizerEngine {
   // Analyses the current audio and renders one frame of the active theme.
   render(nowMs = performance.now()): void {
     const frame = this.frame
-    frame.dt = Math.min(0.05, (nowMs - this.lastMs) / 1000)
+    // Capped so a stall doesn't jump the animation; high enough for 15 fps.
+    frame.dt = Math.min(0.1, (nowMs - this.lastMs) / 1000)
     frame.t = nowMs / 1000
     this.lastMs = nowMs
 
@@ -118,9 +119,9 @@ export class VisualizerEngine {
     } else {
       frame.freq = SILENT
     }
-    frame.bass = follow(frame.bass, bands.bass)
-    frame.mid = follow(frame.mid, bands.mid)
-    frame.high = follow(frame.high, bands.high)
+    frame.bass = follow(frame.bass, bands.bass, undefined, undefined, frame.dt)
+    frame.mid = follow(frame.mid, bands.mid, undefined, undefined, frame.dt)
+    frame.high = follow(frame.high, bands.high, undefined, undefined, frame.dt)
     frame.energy = (frame.bass + frame.mid + frame.high) / 3
     frame.beat = this.beatDetector.update(bands.bass, nowMs)
     if (frame.beat) {

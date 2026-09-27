@@ -1,5 +1,6 @@
 export { Visualizer, type VisualizerOptions } from './visualizer'
 export { VisualizerEngine, type AnalyserSource } from './engine'
+export { FrameLimiter, DEFAULT_FPS, FPS_CHOICES } from './frameLimiter'
 export { VISUALIZER_THEMES, getVisualizerTheme } from './themes'
 export { nebulaTheme } from './themes/nebula'
 export { warpTheme } from './themes/warp'

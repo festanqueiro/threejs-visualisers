@@ -39,6 +39,7 @@ export function computeBands(freq: Uint8Array, sampleRate: number): Bands {
 export class BeatDetector {
   private average = 0
   private lastBeatMs = -Infinity
+  private lastMs: number | null = null
 
   constructor(
     private readonly sensitivity = 1.35,
@@ -50,7 +51,12 @@ export class BeatDetector {
   update(bass: number, nowMs: number): boolean {
     const isBeat =
       bass > this.minLevel && bass > this.average * this.sensitivity && nowMs - this.lastBeatMs >= this.refractoryMs
-    this.average = this.average * this.smoothing + bass * (1 - this.smoothing)
+    // `smoothing` is per 60 fps frame; scaled to the time since the last
+    // call so the average spans the same time at any frame rate.
+    const frames = this.lastMs === null ? 1 : Math.min(6, Math.max(0, (nowMs - this.lastMs) / (1000 / 60)))
+    this.lastMs = nowMs
+    const keep = Math.pow(this.smoothing, frames)
+    this.average = this.average * keep + bass * (1 - keep)
     if (isBeat) this.lastBeatMs = nowMs
     return isBeat
   }
@@ -79,9 +85,12 @@ export function logBinRanges(
 }
 
 // Attack fast, release slow — raw analyser values flicker too much to
-// drive visuals directly.
-export function follow(current: number, target: number, attack = 0.5, release = 0.08): number {
-  return current + (target - current) * (target > current ? attack : release)
+// drive visuals directly. `attack` and `release` are per 60 fps frame; pass
+// the frame's `dt` (seconds) and they're scaled to it, so the motion looks
+// the same at 30 fps or 120.
+export function follow(current: number, target: number, attack = 0.5, release = 0.08, dt = 1 / 60): number {
+  const rate = target > current ? attack : release
+  return current + (target - current) * (1 - Math.pow(1 - rate, dt * 60))
 }
 
 // Convenience for the common case: taps an <audio>/<video> element with

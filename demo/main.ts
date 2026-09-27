@@ -1,6 +1,8 @@
 import {
   Visualizer,
   VISUALIZER_THEMES,
+  DEFAULT_FPS,
+  FPS_CHOICES,
   analyserFromMediaElement,
   createAnalyser,
   type VisualizerThemeId,
@@ -15,7 +17,19 @@ const tabButton = document.getElementById('tab')!
 const hint = document.getElementById('hint')!
 
 const params = new URLSearchParams(location.search)
-const visualizer = new Visualizer(stage, { theme: (params.get('theme') as VisualizerThemeId) ?? undefined })
+const visualizer = new Visualizer(stage, {
+  theme: (params.get('theme') as VisualizerThemeId) ?? undefined,
+  fps: params.has('fps') ? Number(params.get('fps')) : DEFAULT_FPS,
+})
+
+// Frame-rate picker (also ?fps=, 0 for no cap).
+const fpsSelect = document.getElementById('fps') as HTMLSelectElement
+for (const choice of FPS_CHOICES) fpsSelect.append(new Option(choice.label, String(choice.fps)))
+fpsSelect.value = String(Math.round(visualizer.fps))
+fpsSelect.addEventListener('change', () => {
+  visualizer.setFps(Number(fpsSelect.value))
+  fpsSelect.blur()
+})
 
 // One AudioContext for the page; each source gets tapped once.
 let context: AudioContext | null = null
