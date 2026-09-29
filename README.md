@@ -11,7 +11,7 @@ Eight audio-reactive visualisers for the web, built on [three.js](https://threej
 | **Smoke** | A smoky club: smoke rolling up from a lamp that pumps with the kick, stage beams cutting through it | Colours |
 | **Kaleidoscope** | Mirrored wedges of neon rings lit by the spectrum; kicks punch the zoom and flick the mirrors | Mirrors, Colours |
 | **Paint** | Paint flicked at a black wall in thin wiggling strokes, driven by the kicks, mids and highs, fading to dark stains | Colours |
-| **Liquid 3D** | Liquid blobs flowing into each other in 3D; bass and kicks pour them together and ripple the surface. The Lo-Res style draws it in big, dithered pixels and a handful of colours | Style, Palette |
+| **Liquid** | Liquid blobs flowing into each other in 3D; bass and kicks pour them together and ripple the surface. The Lo-Res style draws it in big, dithered pixels and a handful of colours | Style, Palette |
 
 **Live demo: https://festanqueiro.github.io/threejs-visualisers/** (play an audio file or use your microphone).
 

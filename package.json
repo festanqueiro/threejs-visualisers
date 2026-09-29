@@ -1,7 +1,7 @@
 {
   "name": "threejs-visualisers",
   "version": "0.2.0",
-  "description": "Audio-reactive three.js visualisers — eight themes (Nebula, Warp, Horizon, Sound System, Smoke, Kaleidoscope, Paint, Liquid 3D) driven by a Web Audio AnalyserNode.",
+  "description": "Audio-reactive three.js visualisers — eight themes (Nebula, Warp, Horizon, Sound System, Smoke, Kaleidoscope, Paint, Liquid) driven by a Web Audio AnalyserNode.",
   "type": "module",
   "license": "ISC",
   "author": "Francisco Estanqueiro",
