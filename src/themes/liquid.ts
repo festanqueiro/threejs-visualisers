@@ -236,4 +236,4 @@ function create(): ThemeInstance {
   }
 }
 
-export const liquidTheme: VisualizerTheme = { id: 'liquid', name: 'Liquid 3D', create, options: OPTIONS }
+export const liquidTheme: VisualizerTheme = { id: 'liquid', name: 'Liquid', create, options: OPTIONS }
