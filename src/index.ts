@@ -10,6 +10,7 @@ export { smokeTheme } from './themes/smoke'
 export { kaleidoscopeTheme } from './themes/kaleidoscope'
 export { paintTheme } from './themes/paint'
 export { liquidTheme } from './themes/liquid'
+export { reefTheme } from './themes/reef'
 export {
   analyserFromMediaElement,
   analyserFromMediaStream,

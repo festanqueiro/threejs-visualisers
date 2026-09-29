@@ -12,6 +12,7 @@ Eight audio-reactive visualisers for the web, built on [three.js](https://threej
 | **Kaleidoscope** | Mirrored wedges of neon rings lit by the spectrum; kicks punch the zoom and flick the mirrors | Mirrors, Colours |
 | **Paint** | Paint flicked at a black wall in thin wiggling strokes, driven by the kicks, mids and highs, fading to dark stains | Colours |
 | **Liquid** | Liquid blobs flowing into each other in 3D; bass and kicks pour them together and ripple the surface. The Lo-Res style draws it in big, dithered pixels and a handful of colours | Style, Palette |
+| **Reef** | A slow dive through a fractal reef: layers of branching lacework, dark and flecked with gold, hazed by teal water with caustics and drifting marine snow. Bass swells the folds, mids speed the dive, highs glitter the gold | Colours |
 
 **Live demo: https://festanqueiro.github.io/threejs-visualisers/** (play an audio file or use your microphone).
 
