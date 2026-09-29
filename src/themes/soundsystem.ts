@@ -1488,7 +1488,19 @@ function create(): ThemeInstance {
     }
     // Until the model has loaded (or if it failed), keep showing Classic.
     const useModel = stackId === 'mb' && model !== null
-    rig = useModel && model ? model.rig : classicRig
+    const next = useModel && model ? model.rig : classicRig
+    if (next !== rig) {
+      // The rig we're leaving was frozen mid-motion while hidden; start the
+      // incoming one from rest so stale spring velocity and ring ages don't
+      // play out against the current audio.
+      for (const entry of next.drivers) {
+        entry.position = 0
+        entry.velocity = 0
+      }
+      for (const ring of next.pressureRings) ring.age = Infinity
+      bandAverages.fill(0)
+    }
+    rig = next
     classicGroup.visible = !useModel
     if (model) model.rig.group.visible = useModel
   }
