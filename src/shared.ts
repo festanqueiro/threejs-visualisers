@@ -31,7 +31,7 @@ export class SpectrumBars {
         const [start, end] = this.ranges[i]
         for (let b = start; b <= end; b++) if (freq[b] > peak) peak = freq[b]
       }
-      this.levels[i] = follow(this.levels[i], peak / 255, attack, release)
+      this.levels[i] = follow(this.levels[i], peak / 255, attack, release, frame.dt)
     }
     return this.levels
   }
