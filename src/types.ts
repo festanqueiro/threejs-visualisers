@@ -1,7 +1,6 @@
 import type * as THREE from 'three'
 
 export type VisualizerThemeId = 'nebula' | 'warp' | 'horizon' | 'soundsystem' | 'smoke' | 'kaleidoscope' | 'paint' | 'liquid' | 'origins'
-  | 'vapor'
   | 'sponge'
   | 'crystal'
   | 'tangle'

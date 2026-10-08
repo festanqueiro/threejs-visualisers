@@ -1,6 +1,6 @@
 # three.js visualisers
 
-Thirteen audio-reactive visualisers for the web, built on [three.js](https://threejs.org). Give them a Web Audio `AnalyserNode` (from an `<audio>` element, a microphone or any audio graph) and they react to the bass, mids, highs and kicks.
+Twelve audio-reactive visualisers for the web, built on [three.js](https://threejs.org). Give them a Web Audio `AnalyserNode` (from an `<audio>` element, a microphone or any audio graph) and they react to the bass, mids, highs and kicks.
 
 | Theme | What it looks like | Options |
 | --- | --- | --- |
@@ -13,7 +13,6 @@ Thirteen audio-reactive visualisers for the web, built on [three.js](https://thr
 | **Paint** | Paint flicked at a black wall in thin wiggling strokes, driven by the kicks, mids and highs, fading to dark stains | Colours |
 | **Liquid** | Liquid blobs flowing into each other in 3D; bass and kicks pour them together and ripple the surface. The Lo-Res style draws it in big, dithered pixels and a handful of colours | Style, Palette |
 | **Origins** | A flight through the dark past floating yellow spheres, a spiral of white spheres and squiggly sound waves, shaded like a grainy illustration. Mids speed the flight and wind the spiral, bass swells travel down it, kicks pulse the spheres | Colours |
-| **Vapor** | Vaporwave: a striped sun behind a neon grid scrolling towards you, with a wiggling torus, a tumbling Menger cube and squiggles hanging in the sky. Bass swells the sun and ripples the grid, mids speed the scroll, kicks flash the lines | Colours |
 | **Sponge** | A flight down a corridor of an endless Menger sponge, with wiggly tubes running alongside. Mids speed and roll the flight, bass breathes the holes wider, each kick sends a band of light down the corridor | Colours |
 | **Crystal** | A folding fractal crystal turning in the dark, orbited by squiggly ribbons. Mids keep re-forming it, bass swells it, kicks snap the fold on a step | Colours |
 | **Tangle** | A torus knot orbited by smaller knots, each orbited by smaller ones again. Bass thickens the tubes, mids spin the orbits, highs ripple them, kicks throw the rings outward | Colours |
