@@ -7,6 +7,10 @@ import { kaleidoscopeTheme } from './kaleidoscope'
 import { paintTheme } from './paint'
 import { liquidTheme } from './liquid'
 import { originsTheme } from './origins'
+import { vaporTheme } from './vapor'
+import { spongeTheme } from './sponge'
+import { crystalTheme } from './crystal'
+import { tangleTheme } from './tangle'
 import type { VisualizerTheme, VisualizerThemeId } from '../types'
 
 // Every built-in theme, in picker order.
@@ -20,6 +24,10 @@ export const VISUALIZER_THEMES: VisualizerTheme[] = [
   paintTheme,
   liquidTheme,
   originsTheme,
+  vaporTheme,
+  spongeTheme,
+  crystalTheme,
+  tangleTheme,
 ]
 
 export function getVisualizerTheme(id: VisualizerThemeId): VisualizerTheme {

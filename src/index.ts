@@ -11,6 +11,10 @@ export { kaleidoscopeTheme } from './themes/kaleidoscope'
 export { paintTheme } from './themes/paint'
 export { liquidTheme } from './themes/liquid'
 export { originsTheme } from './themes/origins'
+export { vaporTheme } from './themes/vapor'
+export { spongeTheme } from './themes/sponge'
+export { crystalTheme } from './themes/crystal'
+export { tangleTheme } from './themes/tangle'
 export {
   analyserFromMediaElement,
   analyserFromMediaStream,
