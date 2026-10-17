@@ -30,8 +30,9 @@
       #themes button { text-align: left; }
       /* A theme's sub options open to the right of the chosen theme. */
       #options {
-        top: 16px; left: 16px; display: flex; flex-direction: column; gap: 10px; padding: 10px 12px;
-        max-width: min(420px, calc(100vw - 32px));
+        top: 16px; left: 16px; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px;
+        width: max-content; max-width: min(720px, calc(100vw - 32px));
+        overflow-y: auto;
       }
       #options[hidden] { display: none; }
       #options .label { color: var(--dim); margin-bottom: 4px; }
@@ -76,6 +77,7 @@
       <button id="mic">Use microphone</button>
       <button id="tab">Share tab audio</button>
       <select id="fps" title="Frame rate"></select>
+      <select id="quality" title="Quality"></select>
       <button id="fullscreen">Fullscreen</button>
       <audio id="audio" controls hidden></audio>
       <span id="hint" class="dim">Play a file, use your microphone or share a tab's audio. Keys 1–9 switch between the first nine themes.</span>

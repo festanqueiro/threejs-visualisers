@@ -4,7 +4,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { computeBands, BeatDetector, follow } from './audio'
-import type { AudioFrame, ThemeInstance } from './types'
+import { TempoTracker, spectralFlux } from './tempo'
+import type { AudioFrame, ThemeInstance, VisualizerQuality } from './types'
 
 // Where the engine reads audio from each frame: an AnalyserNode, nothing
 // (the themes idle gently), or a function returning either — handy when
@@ -28,6 +29,7 @@ export class VisualizerEngine {
   private width: number
   private height: number
   private analyser: AnalyserSource
+  private quality: VisualizerQuality = 'high'
   private beatDetector = new BeatDetector()
   private frame: AudioFrame = {
     t: 0,
@@ -39,10 +41,15 @@ export class VisualizerEngine {
     beat: false,
     flash: 0,
     hue: Math.random(),
+    bpm: 120,
+    beats: 0,
+    tempoConfidence: 0,
     freq: SILENT,
     sampleRate: 48000,
   }
   private freq: Uint8Array<ArrayBuffer> = new Uint8Array(0)
+  private previousFreq: Uint8Array<ArrayBuffer> = new Uint8Array(0)
+  private tempo = new TempoTracker()
   private lastMs = performance.now()
 
   constructor(options: { width: number; height: number; pixelRatio?: number; analyser?: AnalyserSource }) {
@@ -89,10 +96,24 @@ export class VisualizerEngine {
     this.fitCamera()
   }
 
+  // Resolution, as a multiple of CSS pixels.
+  setPixelRatio(pixelRatio: number): void {
+    this.renderer.setPixelRatio(pixelRatio)
+    this.composer.setPixelRatio(pixelRatio)
+  }
+
+  // Passes the quality on to the active theme (and to every theme set
+  // after). Resolution is set separately, with setPixelRatio().
+  setQuality(quality: VisualizerQuality): void {
+    this.quality = quality
+    this.theme?.setQuality?.(quality)
+  }
+
   // Renders `instance` from now on. The engine doesn't own themes — the
   // caller creates and disposes them (Visualizer does this for you).
   setTheme(instance: ThemeInstance): void {
     this.theme = instance
+    instance.setQuality?.(this.quality)
     this.renderer.shadowMap.enabled = !!instance.shadows
     this.renderer.toneMapping = instance.toneMapping ?? THREE.NoToneMapping
     this.renderPass.scene = instance.scene
@@ -110,15 +131,25 @@ export class VisualizerEngine {
 
     const analyser = typeof this.analyser === 'function' ? this.analyser() : this.analyser
     let bands = { bass: 0, mid: 0, high: 0 }
+    let onset = 0
     if (analyser) {
-      if (this.freq.length !== analyser.frequencyBinCount) this.freq = new Uint8Array(analyser.frequencyBinCount)
+      if (this.freq.length !== analyser.frequencyBinCount) {
+        this.freq = new Uint8Array(analyser.frequencyBinCount)
+        this.previousFreq = new Uint8Array(analyser.frequencyBinCount)
+      }
+      this.previousFreq.set(this.freq)
       analyser.getByteFrequencyData(this.freq)
       frame.freq = this.freq
       frame.sampleRate = analyser.context.sampleRate
       bands = computeBands(this.freq, frame.sampleRate)
+      onset = spectralFlux(this.previousFreq, this.freq, frame.sampleRate)
     } else {
       frame.freq = SILENT
     }
+    this.tempo.push(frame.t, onset)
+    frame.bpm = this.tempo.bpm
+    frame.beats = this.tempo.beatsAt(frame.t)
+    frame.tempoConfidence = this.tempo.confidence
     frame.bass = follow(frame.bass, bands.bass, undefined, undefined, frame.dt)
     frame.mid = follow(frame.mid, bands.mid, undefined, undefined, frame.dt)
     frame.high = follow(frame.high, bands.high, undefined, undefined, frame.dt)

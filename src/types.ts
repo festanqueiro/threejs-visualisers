@@ -1,9 +1,16 @@
 import type * as THREE from 'three'
 
+// Render quality, set for the whole Visualizer (not per theme): Low
+// renders below the display's resolution, HD above it (supersampled), and
+// themes with costly shaders can scale their own detail to match (see
+// ThemeInstance.setQuality).
+export type VisualizerQuality = 'low' | 'high' | 'hd'
+
 export type VisualizerThemeId = 'nebula' | 'warp' | 'horizon' | 'soundsystem' | 'smoke' | 'kaleidoscope' | 'paint' | 'liquid' | 'origins'
   | 'sponge'
   | 'crystal'
   | 'tangle'
+  | 'ocean'
 
 // Everything a theme needs from the audio for one frame. Computed once
 // by the Visualizer shell (so themes don't each redo band/beat analysis),
@@ -18,6 +25,12 @@ export interface AudioFrame {
   beat: boolean // true on the frame a kick is detected
   flash: number // 1 on a beat, decaying to 0 over ~1/3s
   hue: number // 0..1, slowly drifting, nudged forward on each beat
+  // Tempo, tracked over the last few seconds (see tempo.ts): `beats` counts
+  // beats continuously — whole numbers on the beat — and keeps counting
+  // through breakdowns; `bpm` starts at 120 until it's heard enough.
+  bpm: number
+  beats: number
+  tempoConfidence: number // 0..1
   freq: Uint8Array // raw getByteFrequencyData() output; empty when nothing is loaded
   sampleRate: number
 }
@@ -38,6 +51,10 @@ export interface ThemeInstance {
   // Applies one of the theme's `options` (see VisualizerTheme) in place —
   // no rebuild, so the animation carries on uninterrupted.
   setOption?: (optionId: string, valueId: string) => void
+  // Follows the Visualizer's quality setting — called once when the theme
+  // starts and again on every change. Optional: resolution alone is
+  // handled by the shell.
+  setQuality?: (quality: VisualizerQuality) => void
 }
 
 // A user-selectable setting a theme offers (e.g. Colours, Background),
@@ -47,6 +64,9 @@ export interface ThemeOption {
   id: string
   name: string
   values: Array<{ id: string; name: string }>
+  // Only applies while other options have one of these values, e.g.
+  // { stack: ['mb'] } — pickers should hide it otherwise.
+  when?: Record<string, string[]>
 }
 
 export interface VisualizerTheme {
