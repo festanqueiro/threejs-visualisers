@@ -6,6 +6,7 @@ import {
   QUALITY_CHOICES,
   analyserFromMediaElement,
   createAnalyser,
+  visibleThemeOptions,
   type VisualizerQuality,
   type VisualizerThemeId,
 } from '../src'
@@ -96,9 +97,7 @@ function renderControls(): void {
 
   const current = visualizer.themeOptions
   // Options that only apply alongside others' values (see ThemeOption.when).
-  const options = (visualizer.theme.options ?? []).filter((option) =>
-    Object.entries(option.when ?? {}).every(([otherId, values]) => values.includes(current[otherId])),
-  )
+  const options = visibleThemeOptions(visualizer.theme, current)
   optionsEl.hidden = !optionsOpen || options.length === 0
   if (optionsEl.hidden) return
   optionsEl.replaceChildren(

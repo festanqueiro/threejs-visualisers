@@ -1,4 +1,6 @@
-export { Visualizer, QUALITY_CHOICES, type VisualizerOptions } from './visualizer'
+export { Visualizer, type VisualizerOptions } from './visualizer'
+export { AutoQuality, QUALITY_CHOICES, type QualityTarget } from './quality'
+export { resolveThemeOptions, visibleThemeOptions } from './options'
 export { VisualizerEngine, type AnalyserSource } from './engine'
 export { FrameLimiter, DEFAULT_FPS, FPS_CHOICES } from './frameLimiter'
 export { StutterDetector } from './stutterDetector'
