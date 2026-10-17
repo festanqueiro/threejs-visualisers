@@ -73,6 +73,8 @@ playButton.addEventListener('click', () => {
   - `fps`: a frame-rate cap, default `30` (`DEFAULT_FPS`) to go easy on the GPU. `0` renders every display refresh.
 - **Methods:** `setTheme(id, options?)`, `setOption(optionId, valueId)`, `setAnalyser(source)`, `setFps(fps)`, `setQuality(quality)`, `start()`, `stop()` and `dispose()`.
 - **Getters:** `theme`, `themeOptions`, `fps`, `quality` (the level in use) and `autoQuality`.
+- **`AutoQuality`**: the Visualizer's quality logic on its own, for apps that run their own render loop around a `VisualizerEngine`. `new AutoQuality(engine, basePixelRatio, onChange?)`, then `set('auto' | 'low' | 'high' | 'hd')`, `frame(now, fps)` after every frame rendered, `reset()` after a theme switch or frame-rate change; `quality` and `auto` say where it is.
+- **`resolveThemeOptions(theme, wanted?)`** fills in a theme's option values (valid choices kept, the rest their first value) and **`visibleThemeOptions(theme, values)`** lists the options a picker should show (those whose `when` is met).
 - **`FPS_CHOICES`**: the frame rates worth offering in a picker (15, 24, 30, 60 and Max), with labels.
 - **`VISUALIZER_THEMES`**: every theme, with its `id`, `name` and `options`. Use it to build a picker.
 - **`analyserFromMediaElement(element, context?)`** and **`analyserFromMediaStream(stream, context?)`**: tap an `<audio>`/`<video>` element or a `MediaStream` (such as a microphone) with an analyser set up the way the themes expect. A media element can only be tapped once, so keep the result.
