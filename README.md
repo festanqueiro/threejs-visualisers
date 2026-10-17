@@ -7,7 +7,7 @@ Twelve audio-reactive visualisers for the web, built on [three.js](https://three
 | **Nebula** | A noise-warped glowing core that swells with the bass, a spectrum ring around it, and a particle field streaming towards you | — |
 | **Warp** | A tunnel of spectrum-shaped rings flying at you, a scrolling history of the track | — |
 | **Horizon** | A synthwave wireframe landscape built from the spectrum, scrolling towards you under a striped sun that pulses with the kick | — |
-| **Sound System** | A Jamaican-style sound system stack; cones pump, boxes shake, pressure rings pulse | Stack, Colours, Background |
+| **Sound System** | A Jamaican-style sound system stack; cones pump, boxes shake, pressure rings pulse. Colours → Original shows the Mais Baixo stack in the real rig's black and white, with the diamond logo across the middle bins. Mode → Dancing (shown for the Mais Baixo stack only) puts the real rig, logo and all, on arms and legs, painted in the chosen colours, dancing in time with the kicks: bounce, skank, side-step, hands in the air | Stack, Mode, Colours, Background |
 | **Smoke** | A smoky club: smoke rolling up from a lamp that pumps with the kick, stage beams cutting through it | Colours |
 | **Kaleidoscope** | Mirrored wedges of neon rings lit by the spectrum; kicks punch the zoom and flick the mirrors | Mirrors, Colours |
 | **Paint** | Paint flicked at a black wall in thin wiggling strokes, driven by the kicks, mids and highs, fading to dark stains | Colours |
@@ -16,6 +16,7 @@ Twelve audio-reactive visualisers for the web, built on [three.js](https://three
 | **Sponge** | A flight down a corridor of an endless Menger sponge, with wiggly tubes running alongside. Mids speed and roll the flight, bass breathes the holes wider, each kick sends a band of light down the corridor | Colours |
 | **Crystal** | A folding fractal crystal turning in the dark, orbited by squiggly ribbons. Mids keep re-forming it, bass swells it, kicks snap the fold on a step | Colours |
 | **Tangle** | A torus knot orbited by smaller knots, each orbited by smaller ones again. Bass thickens the tubes, mids spin the orbits, highs ripple them, kicks throw the rings outward | Colours |
+| **Ocean** | Open sea out to the horizon, riding the swell towards the sun, with spray blowing off the crests. Bass raises the swell and big kicks send a wave rolling in; mids make it choppier; highs set the glitter and whitecaps; loud passages take the camera down into the troughs. Kicks flare the sun, or at night light up glowing foam and send the odd shooting star across. Day cycle moves morning → day → sunset → night | Sky, Film |
 
 **Live demo: https://festanqueiro.github.io/threejs-visualisers/** (play an audio file or use your microphone).
 
@@ -68,9 +69,10 @@ playButton.addEventListener('click', () => {
   - `themeOptions`: starting option values, e.g. `{ mirrors: '12' }`.
   - `pixelRatio`: defaults to `min(devicePixelRatio, 2)`.
   - `autoStart`: defaults to `true`.
+  - `quality`: `'auto'` (default), `'low'`, `'high'` or `'hd'`, for every theme. Auto starts at High and steps down a level whenever the browser keeps missing the frame rate; a fixed level stays put. `onQualityChange(quality, auto)` reports changes. Low renders at 0.6× the pixel ratio, HD at 1.5× (supersampled, up to 3×), and themes with heavy shaders (Ocean) scale their own detail to match. `QUALITY_CHOICES` lists them for a picker.
   - `fps`: a frame-rate cap, default `30` (`DEFAULT_FPS`) to go easy on the GPU. `0` renders every display refresh.
-- **Methods:** `setTheme(id, options?)`, `setOption(optionId, valueId)`, `setAnalyser(source)`, `setFps(fps)`, `start()`, `stop()` and `dispose()`.
-- **Getters:** `theme`, `themeOptions` and `fps`.
+- **Methods:** `setTheme(id, options?)`, `setOption(optionId, valueId)`, `setAnalyser(source)`, `setFps(fps)`, `setQuality(quality)`, `start()`, `stop()` and `dispose()`.
+- **Getters:** `theme`, `themeOptions`, `fps`, `quality` (the level in use) and `autoQuality`.
 - **`FPS_CHOICES`**: the frame rates worth offering in a picker (15, 24, 30, 60 and Max), with labels.
 - **`VISUALIZER_THEMES`**: every theme, with its `id`, `name` and `options`. Use it to build a picker.
 - **`analyserFromMediaElement(element, context?)`** and **`analyserFromMediaStream(stream, context?)`**: tap an `<audio>`/`<video>` element or a `MediaStream` (such as a microphone) with an analyser set up the way the themes expect. A media element can only be tapped once, so keep the result.
@@ -78,7 +80,7 @@ playButton.addEventListener('click', () => {
 
 ### Writing your own theme
 
-A theme is `{ id, name, create, options? }`. `create()` returns a scene, a camera and an `update(frame)` function. `update` receives smoothed `bass`, `mid`, `high` and `energy` values (0–1), a `beat` flag, a decaying `flash`, a drifting `hue` and the raw spectrum. It returns the bloom strength for that frame. See `src/types.ts` and any file in `src/themes/`. `shared.ts` has helpers for spectrum bars, full-screen shader quads and fBm noise.
+A theme is `{ id, name, create, options? }`. `create()` returns a scene, a camera and an `update(frame)` function. `update` receives smoothed `bass`, `mid`, `high` and `energy` values (0–1), a `beat` flag, a decaying `flash`, a drifting `hue`, the tracked tempo (`bpm`, and `beats`: a running beat count, whole on each beat, that keeps time through breakdowns) and the raw spectrum. It returns the bloom strength for that frame. An option can carry `when` (e.g. `{ stack: ['mb'] }`) to say it only applies alongside other options' values; pickers should hide it otherwise. A theme with costly shaders can also take `setQuality(quality)` to follow the Visualizer's quality setting (see Ocean). See `src/types.ts` and any file in `src/themes/`. `shared.ts` has helpers for spectrum bars, full-screen shader quads and fBm noise.
 
 ## Notes
 
@@ -89,5 +91,7 @@ A theme is `{ id, name, create, options? }`. `create()` returns a scene, a camer
 ## License
 
 ISC © Francisco Estanqueiro
+
+The Dancing stack's arms and legs come from the player character in the Mais Baixo museum and runner games.
 
 Nebula uses Ashima Arts / Stefan Gustavson's 3D simplex noise (MIT), credited in `src/themes/nebula.ts`.

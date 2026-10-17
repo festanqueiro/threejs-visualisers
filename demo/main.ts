@@ -3,8 +3,10 @@ import {
   VISUALIZER_THEMES,
   DEFAULT_FPS,
   FPS_CHOICES,
+  QUALITY_CHOICES,
   analyserFromMediaElement,
   createAnalyser,
+  type VisualizerQuality,
   type VisualizerThemeId,
 } from '../src'
 
@@ -17,9 +19,16 @@ const tabButton = document.getElementById('tab')!
 const hint = document.getElementById('hint')!
 
 const params = new URLSearchParams(location.search)
+// The Visualizer reports its starting quality from its constructor, before
+// the picker below exists; it's shown once it does.
+let qualityPickerReady = false
 const visualizer = new Visualizer(stage, {
   theme: (params.get('theme') as VisualizerThemeId) ?? undefined,
   fps: params.has('fps') ? Number(params.get('fps')) : DEFAULT_FPS,
+  quality: (params.get('quality') as VisualizerQuality | 'auto') ?? undefined,
+  onQualityChange: () => {
+    if (qualityPickerReady) showQuality()
+  },
 })
 
 // Frame-rate picker (also ?fps=, 0 for no cap).
@@ -29,6 +38,24 @@ fpsSelect.value = String(Math.round(visualizer.fps))
 fpsSelect.addEventListener('change', () => {
   visualizer.setFps(Number(fpsSelect.value))
   fpsSelect.blur()
+})
+
+// Quality picker (also ?quality=auto|low|high|hd), for every theme. Auto
+// shows what it has settled on, e.g. "Auto (Low)" after stepping down.
+const qualitySelect = document.getElementById('quality') as HTMLSelectElement
+const autoOption = new Option('Auto', 'auto')
+qualitySelect.append(autoOption)
+for (const choice of QUALITY_CHOICES) qualitySelect.append(new Option(choice.label, choice.quality))
+function showQuality(): void {
+  const label = QUALITY_CHOICES.find((c) => c.quality === visualizer.quality)?.label
+  autoOption.text = `Auto (${label})`
+  qualitySelect.value = visualizer.autoQuality ? 'auto' : visualizer.quality
+}
+qualityPickerReady = true
+showQuality()
+qualitySelect.addEventListener('change', () => {
+  visualizer.setQuality(qualitySelect.value as VisualizerQuality | 'auto')
+  qualitySelect.blur()
 })
 
 // One AudioContext for the page; each source gets tapped once.
@@ -67,10 +94,13 @@ function renderControls(): void {
     }),
   )
 
-  const options = visualizer.theme.options ?? []
+  const current = visualizer.themeOptions
+  // Options that only apply alongside others' values (see ThemeOption.when).
+  const options = (visualizer.theme.options ?? []).filter((option) =>
+    Object.entries(option.when ?? {}).every(([otherId, values]) => values.includes(current[otherId])),
+  )
   optionsEl.hidden = !optionsOpen || options.length === 0
   if (optionsEl.hidden) return
-  const current = visualizer.themeOptions
   optionsEl.replaceChildren(
     ...options.map((option) => {
       const section = document.createElement('div')
@@ -99,12 +129,15 @@ function renderControls(): void {
 }
 
 // Lines the options panel up with the chosen theme, just right of the column,
-// keeping it on screen.
+// keeping it on screen and clear of the bottom bar (scrolling if it can't fit).
 function placeOptions(anchor: HTMLElement): void {
   const column = themesEl.getBoundingClientRect()
-  const top = anchor.getBoundingClientRect().top - 10
-  const maxTop = window.innerHeight - optionsEl.offsetHeight - 16
+  const bottom = document.getElementById('bar')!.getBoundingClientRect().top - 8
   optionsEl.style.left = `${column.right + 8}px`
+  optionsEl.style.maxWidth = `${Math.min(720, window.innerWidth - column.right - 24)}px`
+  optionsEl.style.maxHeight = `${bottom - 16}px`
+  const top = anchor.getBoundingClientRect().top - 10
+  const maxTop = bottom - optionsEl.offsetHeight
   optionsEl.style.top = `${Math.max(16, Math.min(top, maxTop))}px`
 }
 

@@ -2,7 +2,9 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import systemMbUrl from '../assets/system-mb.glb?url'
+import systemMbPaintedUrl from '../assets/system-mb-painted.glb?url'
 import { SpectrumBars, disposeScene } from '../shared'
+import { createDancer, DANCER_HEIGHT, type DancerFigure } from './dancer'
 import type { AudioFrame, ThemeInstance, ThemeOption, VisualizerTheme } from '../types'
 
 // A Jamaican-style sound system stack, modelled on a classic outdoor set,
@@ -90,6 +92,11 @@ const PALETTES: Record<string, Palette> = {
   },
 }
 
+// Original: the Mais Baixo rig's own paint job — on the Mais Baixo stack
+// it's the painted model (see buildPaintedStack); the classic stack gets
+// the nearest palette, black and white.
+PALETTES.original = PALETTES['black-white']
+
 const OPTIONS: ThemeOption[] = [
   {
     id: 'stack',
@@ -100,20 +107,32 @@ const OPTIONS: ThemeOption[] = [
     ],
   },
   {
+    // Mais Baixo only: standing, or on arms and legs, dancing (always the
+    // real rig with its logo, as in the Mais Baixo games, in the chosen colours).
+    id: 'mode',
+    name: 'Mode',
+    when: { stack: ['mb'] },
+    values: [
+      { id: 'standing', name: 'Standing' },
+      { id: 'dancing', name: 'Dancing' },
+    ],
+  },
+  {
     id: 'colours',
     name: 'Colours',
     values: [
       { id: 'app', name: 'MCO' },
       { id: 'black-white', name: 'Black & White' },
       { id: 'natural', name: 'Natural' },
+      { id: 'original', name: 'Original' },
     ],
   },
   {
     id: 'background',
     name: 'Background',
     values: [
-      { id: 'field', name: 'Field' },
       { id: 'urban', name: 'Urban' },
+      { id: 'field', name: 'Field' },
     ],
   },
 ]
@@ -220,6 +239,136 @@ function drawGrain(ctx: CanvasRenderingContext2D, w: number, h: number, random: 
     }
     ctx.stroke()
   }
+}
+
+// Oiled walnut, for the real Mais Baixo rig under Natural: a warm,
+// mid-brown board, lighter and darker in broad bands across it, long
+// grain lines that flow together (one shared wave field, not each its own
+// wiggle), now and then a cathedral arch of figure, fine pores along the
+// grain, and a few pale streaks of sapwood. Its roughness map dulls the
+// pores against the oiled surface. Seeded, so each part gets its own board.
+// Drawn at 2048² (the layout in 1024 units, scaled up) plus a layer of
+// hairline grain and pores only that resolution holds.
+const WALNUT_SIZE = 2048
+function walnutTexture(seed: number): { map: THREE.CanvasTexture; roughness: THREE.CanvasTexture } {
+  const size = WALNUT_SIZE
+  const scale = size / 1024
+  const random = mulberry32(seed)
+  const phases = Array.from({ length: 6 }, () => random() * Math.PI * 2)
+  // Where the grain sits across the board at x, for a line starting at y0:
+  // gentle waves that drift slowly with y0, so neighbouring lines run
+  // together like real grain.
+  const flow = (x: number, y0: number) =>
+    Math.sin(x / 260 + phases[0] + y0 / 400) * 14 +
+    Math.sin(x / 97 + phases[1] + y0 / 180) * 4 +
+    Math.sin(x / 31 + phases[2]) * 0.8
+
+  const map = canvasTexture(
+    size,
+    size,
+    (ctx) => {
+      ctx.scale(scale, scale)
+      const w = 1024
+      const h = 1024
+      // Broad colour bands across the grain.
+      for (let y = 0; y < h; y += 1) {
+        const band =
+          0.5 +
+          0.28 * Math.sin(y / 61 + phases[3]) +
+          0.16 * Math.sin(y / 23 + phases[4]) +
+          0.08 * Math.sin(y / 7.3 + phases[5])
+        const r = 92 + band * 62
+        const g = 60 + band * 40
+        const b = 38 + band * 24
+        ctx.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`
+        ctx.fillRect(0, y, w, 1)
+      }
+      const stroke = (y0: number, style: string, width: number, from = 0, to = w) => {
+        ctx.strokeStyle = style
+        ctx.lineWidth = width
+        ctx.beginPath()
+        for (let x = from; x <= to; x += 3) {
+          const y = y0 + flow(x, y0)
+          if (x === from) ctx.moveTo(x, y)
+          else ctx.lineTo(x, y)
+        }
+        ctx.stroke()
+      }
+      // Grain lines, dark and fine, some running only part way.
+      for (let i = 0; i < 420; i++) {
+        const y0 = random() * (h + 60) - 30
+        const from = random() < 0.3 ? random() * w * 0.6 : 0
+        const to = random() < 0.3 ? from + random() * w * 0.6 : w
+        stroke(y0, `rgba(40,22,10,${0.1 + random() * 0.26})`, 0.4 + random() * 1.4, from, to)
+      }
+      // Cathedral figure: nested arches, as where the saw cut across a
+      // growth ring.
+      for (let n = 0; n < 2; n++) {
+        const cx = random() * w
+        const cy = h * (0.2 + random() * 0.6)
+        const reach = 220 + random() * 260
+        for (let k = 0; k < 9; k++) {
+          const top = cy - k * (7 + random() * 5)
+          ctx.strokeStyle = `rgba(42,23,11,${0.16 + random() * 0.18})`
+          ctx.lineWidth = 0.8 + random() * 1.4
+          ctx.beginPath()
+          for (let x = cx - reach; x <= cx + reach; x += 6) {
+            const u = (x - cx) / reach
+            const y = top + u * u * (120 + k * 14) + flow(x, top) * 0.5
+            if (x === cx - reach) ctx.moveTo(x, y)
+            else ctx.lineTo(x, y)
+          }
+          ctx.stroke()
+        }
+      }
+      // Pale streaks: a lighter, warmer sheen in places.
+      for (let i = 0; i < 26; i++) {
+        stroke(random() * h, `rgba(196,146,98,${0.06 + random() * 0.1})`, 3 + random() * 10)
+      }
+      // Pores: short dark dashes along the grain.
+      ctx.fillStyle = 'rgba(30,16,7,0.4)'
+      for (let i = 0; i < 9000; i++) {
+        const x = random() * w
+        const y0 = random() * h
+        ctx.fillRect(x, y0 + flow(x, y0) * 0.15, 1.5 + random() * 5, 1)
+      }
+      // Full-resolution detail: hairline grain and the finest pores.
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      for (let i = 0; i < 900; i++) {
+        const y0 = random() * 1024
+        ctx.strokeStyle = `rgba(40,22,10,${0.06 + random() * 0.14})`
+        ctx.lineWidth = 0.5 + random() * 0.6
+        ctx.beginPath()
+        for (let x = 0; x <= 1024; x += 3) {
+          const y = (y0 + flow(x, y0)) * scale
+          if (x === 0) ctx.moveTo(x * scale, y)
+          else ctx.lineTo(x * scale, y)
+        }
+        ctx.stroke()
+      }
+      ctx.fillStyle = 'rgba(30,16,7,0.3)'
+      for (let i = 0; i < 40000; i++) {
+        const x = random() * 1024
+        const y0 = random() * 1024
+        ctx.fillRect(x * scale, (y0 + flow(x, y0) * 0.15) * scale, 1 + random() * 4, 1)
+      }
+    },
+    [1, 1],
+  )
+  map.anisotropy = 16
+
+  // Half resolution is plenty for the sheen.
+  const roughness = canvasTexture(size / 2, size / 2, (ctx, w, h) => {
+    // Oiled: fairly smooth (about 0.45), the pores and grain lines duller.
+    const r2 = mulberry32(seed)
+    ctx.fillStyle = 'rgb(115,115,115)'
+    ctx.fillRect(0, 0, w, h)
+    ctx.fillStyle = 'rgba(200,200,200,0.5)'
+    for (let i = 0; i < 40000; i++) ctx.fillRect(r2() * w, r2() * h, 1 + r2() * 6, 1)
+  }, [1, 1])
+  roughness.colorSpace = THREE.NoColorSpace
+  roughness.anisotropy = 16
+  return { map, roughness }
 }
 
 // Worn paint over plywood: a solid coat with brush strokes, the grain
@@ -1319,19 +1468,76 @@ function create(): ThemeInstance {
   const MODEL_SCALE = 1.5 // the model is life-size (~2m); scaled up to hold the frame
   interface ModelStack {
     rig: Rig
-    // Wood meshes and their original (textured) material, per paint slot.
+    // Cabinet meshes and their original material, per paint slot: the
+    // palette repaints them, except under `ownPaletteId`, which shows the
+    // model's own finish (plywood for the plain export, the rig's black for
+    // the painted one).
     woodMeshes: Array<{ mesh: THREE.Mesh; original: THREE.Material; slot: 'accentA' | 'accentB' }>
+    ownPaletteId: string
     // Double-sided, bump-free copies of the palette's paint materials (see
     // applyModelFinish) — the imported geometry isn't reliably closed.
     painted: Record<'accentA' | 'accentB', THREE.MeshStandardMaterial>
+    // Arms and legs, when it's dancing (see dancer.ts).
+    figure?: DancerFigure
+    // The painted export's parts, painted per palette (see paintRig).
+    rigParts?: RigParts
   }
-  let model: ModelStack | null = null
-  let modelLoading = false
+  interface RigParts {
+    bins: THREE.MeshStandardMaterial
+    tops: THREE.MeshStandardMaterial
+    interior: THREE.MeshStandardMaterial // the white inside the middle bins' mouths
+    lineArrays: THREE.MeshStandardMaterial
+    logoFront: THREE.MeshStandardMaterial
+    logoSides: THREE.MeshStandardMaterial
+    ownBlack: THREE.MeshStandardMaterial
+    ownWhite: THREE.MeshStandardMaterial
+  }
+
+  // How each palette paints the real rig. 'own' keeps the export's black or
+  // white. Original is the rig as it is; Black & White goes all white
+  // (Original already is the black and white); Natural is oiled walnut
+  // throughout, logo included (see walnutTexture); MCO paints the bins and tops and makes the
+  // logo purple.
+  type RigLook = Finish | 'own' | 'walnut'
+  const WALNUT_BOARDS: Record<Exclude<keyof RigParts, 'ownBlack' | 'ownWhite'>, number> = {
+    bins: 31,
+    tops: 32,
+    lineArrays: 32,
+    interior: 33,
+    logoFront: 34,
+    logoSides: 34,
+  }
+  const ALL_WHITE: Finish = { color: WHITE_PAINT, worn: true }
+  function rigLooks(paletteId: string | null): Record<Exclude<keyof RigParts, 'ownBlack' | 'ownWhite'>, RigLook> {
+    switch (paletteId) {
+      case 'natural':
+        return { bins: 'walnut', tops: 'walnut', interior: 'walnut', lineArrays: 'walnut', logoFront: 'walnut', logoSides: 'walnut' }
+      case 'black-white':
+        return { bins: ALL_WHITE, tops: ALL_WHITE, interior: ALL_WHITE, lineArrays: ALL_WHITE, logoFront: ALL_WHITE, logoSides: ALL_WHITE }
+      case 'app': {
+        const purple: Finish = { color: hex(APP_SECONDARY), worn: true }
+        return { bins: PALETTES.app.accentA, tops: PALETTES.app.accentB, interior: 'own', lineArrays: 'own', logoFront: purple, logoSides: purple }
+      }
+      default:
+        return { bins: 'own', tops: 'own', interior: 'own', lineArrays: 'own', logoFront: 'own', logoSides: 'own' }
+    }
+  }
+  // Two exports of the model: 'plain' (plywood, grilles; repainted with
+  // the palette) and 'painted' (the real rig's black and white). Each is
+  // built standing or dancing as needed, keyed `${variant}|${mode}`.
+  type ModelVariant = 'plain' | 'painted'
+  const modelStacks = new Map<string, ModelStack>()
+  // The loaded GLBs, kept untouched: every stack is built from a fresh
+  // clone (building moves, scales and adds to its copy).
+  const modelScenes: Partial<Record<ModelVariant, THREE.Object3D>> = {}
+  const modelLoading = new Set<ModelVariant>()
+  let activeStack: ModelStack | null = null
   let disposed = false
   let wantedStack = 'classic'
+  let wantedMode = 'standing'
 
   function rigs(): Rig[] {
-    return model ? [classicRig, model.rig] : [classicRig]
+    return [classicRig, ...Array.from(modelStacks.values(), (stack) => stack.rig)]
   }
 
   // Natural keeps the model's own plywood texture; the painted schemes
@@ -1357,13 +1563,53 @@ function create(): ThemeInstance {
       stack.painted[slot].needsUpdate = true
     }
     for (const { mesh, original, slot } of stack.woodMeshes) {
-      mesh.material = appliedPaletteId === 'natural' ? original : stack.painted[slot]
+      mesh.material = appliedPaletteId === stack.ownPaletteId ? original : stack.painted[slot]
+    }
+    if (stack.rigParts) paintRig(stack.rigParts)
+  }
+
+  function paintRig(parts: RigParts) {
+    const looks = rigLooks(appliedPaletteId)
+    let seed = 10
+    for (const [part, look] of Object.entries(looks) as Array<[keyof typeof looks, RigLook]>) {
+      const material = parts[part]
+      const emissive = material.emissive.getHex() // the line arrays' glow colour
+      if (look === 'own') {
+        material.copy(part === 'bins' || part === 'tops' || part === 'logoFront' ? parts.ownBlack : parts.ownWhite)
+      } else if (look === 'walnut') {
+        // Four boards (bins; tops and line arrays; horn interiors; logo) —
+        // each is a 2048² texture, so parts that sit together share one.
+        const board = WALNUT_BOARDS[part]
+        let walnut = walnutCache.get(board)
+        if (!walnut) {
+          walnut = walnutTexture(board)
+          walnutCache.set(board, walnut)
+        }
+        material.color.setHex(0xffffff)
+        material.map = walnut.map
+        material.roughnessMap = walnut.roughness
+        material.roughness = 1 // scaled by the map
+        material.metalness = 0
+        material.bumpMap = null
+        material.side = THREE.DoubleSide
+      } else {
+        // Chip-free and bump-free, as for the plain export (see applyModelFinish).
+        material.color.setHex(0xffffff)
+        material.roughnessMap = null
+        material.roughness = 0.62
+        material.map = cached(`${look.color}|${look.worn}|${seed}|nochips`, () => paintedWood(look.color, seed, look.worn, false)).map
+        material.bumpMap = null
+        material.side = THREE.DoubleSide
+      }
+      material.emissive.setHex(emissive)
+      material.needsUpdate = true
+      seed++
     }
   }
 
-  function buildModelStack(root: THREE.Object3D): ModelStack {
+  function buildModelStack(root: THREE.Object3D, modelScale = MODEL_SCALE): ModelStack {
     const group = new THREE.Group()
-    root.scale.setScalar(MODEL_SCALE)
+    root.scale.setScalar(modelScale)
     group.add(root)
     // Centre it on the platform, front facing the camera (+z).
     root.updateMatrixWorld(true)
@@ -1383,6 +1629,7 @@ function create(): ThemeInstance {
         view: { lookY: 1.6, height: 1.5, distance: 7.2, sway: 1 },
       },
       woodMeshes: [],
+      ownPaletteId: 'natural',
       painted: { accentA: new THREE.MeshStandardMaterial(), accentB: new THREE.MeshStandardMaterial() },
     }
     const { rig: modelRig } = stack
@@ -1436,7 +1683,7 @@ function create(): ThemeInstance {
       const source: DriverEntry = { band: SUB, throw: 0.18, flutter: 0, position: 0, velocity: 0 }
       modelRig.drivers.push(source)
       // Recoil is applied to the bin node in the model's (scaled) space.
-      modelRig.boxes.push({ group: bin, base: bin.position.clone(), band: SUB, shake: 0.06 / MODEL_SCALE })
+      modelRig.boxes.push({ group: bin, base: bin.position.clone(), band: SUB, shake: 0.06 / modelScale })
       const mouth = new THREE.Vector3((box.min.x + box.max.x) / 2, box.min.y + size.y * 0.3, box.max.z + 0.05)
       addPressureRing(mouth, size.x * 0.42, source, group, modelRig.pressureRings)
     }
@@ -1460,35 +1707,200 @@ function create(): ThemeInstance {
     return stack
   }
 
-  function setStack(stackId: string) {
-    wantedStack = stackId
-    if (stackId === 'mb' && !model && !modelLoading) {
-      modelLoading = true
+  // --- Mais Baixo, original: the painted export --------------------------
+  // The same stack as painted for the Mais Baixo museum's player
+  // character (maisbaixo: assets/models/system-mb-painted.glb): black
+  // cabinets, the two middle bins white inside their mouths with black
+  // slats, white line-array columns in the tops. Its parts aren't named
+  // like the plain export's: the bins are C-Component#176.*, the tops
+  // C-Component#216*, the line arrays _G-Object.118*. There are no
+  // grilles, so the tops have no cones; the line arrays glow instead. The
+  // diamond-and-cross logo across the middle bins is built here, as in
+  // the museum (shared/js/character.js).
+  const BIN_NAME = /^C-Component#176/
+  const LINE_ARRAY_NAME = /^_G-Object\.?118/
+  function buildPaintedStack(root: THREE.Object3D, modelScale = MODEL_SCALE): ModelStack {
+    const raw = new THREE.Box3().setFromObject(root) // model units, before scaling
+    const group = new THREE.Group()
+    root.scale.setScalar(modelScale)
+    group.add(root)
+    root.updateMatrixWorld(true)
+    const bounds = new THREE.Box3().setFromObject(root)
+    const centre = bounds.getCenter(new THREE.Vector3())
+    root.position.set(-centre.x, PLATFORM_HEIGHT - bounds.min.y, -centre.z)
+    root.updateMatrixWorld(true)
+
+    const stack: ModelStack = {
+      rig: {
+        group,
+        drivers: [],
+        boxes: [],
+        pressureRings: [],
+        hornGlows: [],
+        tweeterDomes: [],
+        view: { lookY: 1.6, height: 1.5, distance: 7.2, sway: 1 },
+      },
+      woodMeshes: [],
+      ownPaletteId: 'original',
+      painted: { accentA: new THREE.MeshStandardMaterial(), accentB: new THREE.MeshStandardMaterial() },
+    }
+    const { rig: modelRig } = stack
+
+    // Each part gets its own material, so a palette can paint it on its
+    // own (see paintRig); `ownBlack`/`ownWhite` keep the export's finish.
+    const ownBlack = new THREE.MeshStandardMaterial({ color: BLACK_PAINT, roughness: 0.6, side: THREE.DoubleSide })
+    // Off-white, as WHITE_PAINT: true white blows out in full sun.
+    const ownWhite = new THREE.MeshStandardMaterial({ color: WHITE_PAINT, roughness: 0.6, side: THREE.DoubleSide })
+    const parts: RigParts = {
+      bins: ownBlack.clone(),
+      tops: ownBlack.clone(),
+      interior: ownWhite.clone(),
+      lineArrays: Object.assign(ownWhite.clone(), { emissive: new THREE.Color(palette.glow), emissiveIntensity: 0 }),
+      logoFront: ownBlack.clone(),
+      logoSides: ownWhite.clone(),
+      ownBlack,
+      ownWhite,
+    }
+    stack.rigParts = parts
+    const bins: THREE.Object3D[] = []
+    const name = (o: THREE.Object3D | null) => o?.name ?? ''
+    root.traverse((object) => {
+      // (GLTFLoader drops the dots from node names, and a part with two
+      // materials loads as a group of meshes — count the group once.)
+      if (BIN_NAME.test(object.name) && !BIN_NAME.test(name(object.parent))) bins.push(object)
+      const mesh = object as THREE.Mesh
+      if (!mesh.isMesh) return
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      const isBlack = (mesh.material as THREE.Material).name === 'MB_Black'
+      const inBin = BIN_NAME.test(name(mesh)) || BIN_NAME.test(name(mesh.parent))
+      if (LINE_ARRAY_NAME.test(name(mesh)) || LINE_ARRAY_NAME.test(name(mesh.parent))) mesh.material = parts.lineArrays
+      else if (!isBlack) mesh.material = parts.interior
+      else mesh.material = inBin ? parts.bins : parts.tops
+    })
+    modelRig.hornGlows.push({ material: parts.lineArrays, strength: 0.05 })
+
+    // Bins, left to right: virtual sub drivers → recoil and pressure rings
+    // from the horn mouths.
+    bins.sort((a, b) => new THREE.Box3().setFromObject(a).getCenter(new THREE.Vector3()).x - new THREE.Box3().setFromObject(b).getCenter(new THREE.Vector3()).x)
+    for (const bin of bins) {
+      const box = new THREE.Box3().setFromObject(bin)
+      const size = box.getSize(new THREE.Vector3())
+      const source: DriverEntry = { band: SUB, throw: 0.18, flutter: 0, position: 0, velocity: 0 }
+      modelRig.drivers.push(source)
+      modelRig.boxes.push({ group: bin, base: bin.position.clone(), band: SUB, shake: 0.06 / modelScale })
+      const mouth = new THREE.Vector3((box.min.x + box.max.x) / 2, box.min.y + size.y * 0.3, box.max.z + 0.05)
+      addPressureRing(mouth, size.x * 0.42, source, group, modelRig.pressureRings)
+    }
+
+    // The logo: bars forming a diamond with a cross inside, across the two
+    // middle bins' mouths — on the real rig black on the front, white round
+    // the sides. Built in model units.
+    {
+      const { logoFront, logoSides } = parts
+      const boardMaterials = [logoSides, logoSides, logoSides, logoSides, logoFront, logoSides] // +x, -x, +y, -y, front, back
+      const logo = new THREE.Group()
+      const bar = (w: number, h: number, x: number, y: number, turn = 0) => {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.06), boardMaterials)
+        mesh.position.set(x, y, raw.max.z - 0.025)
+        mesh.rotation.z = turn
+        mesh.castShadow = true
+        logo.add(mesh)
+      }
+      const cy = 0.33 // centre height above the floor
+      const half = 0.3 // centre to tip
+      const thickness = 0.07
+      for (const sx of [-1, 1]) {
+        for (const sy of [-1, 1]) {
+          bar(half * Math.SQRT2 + thickness, thickness, (sx * half) / 2, cy + (sy * half) / 2, sx * sy > 0 ? -Math.PI / 4 : Math.PI / 4)
+        }
+      }
+      bar(0.23, 0.06, 0, cy)
+      bar(0.06, 0.21, 0, cy)
+      root.add(logo)
+    }
+    return stack
+  }
+
+  // Dancing: a life-size stack on human legs, the whole figure scaled up
+  // to about the height of the standing stack — the same character as
+  // in the Mais Baixo museum and runner games.
+  const DANCER_FIGURE_HEIGHT = 3.6
+  function buildDancer(root: THREE.Object3D): ModelStack {
+    const stack = buildPaintedStack(root, 1)
+    const { group } = stack.rig
+    const bounds = new THREE.Box3().setFromObject(root)
+    const size = bounds.getSize(new THREE.Vector3())
+    // Everything the stack built (model, cones, rings) moves as one body,
+    // standing on y = 0 rather than on the platform.
+    const content = new THREE.Group()
+    content.add(...group.children)
+    content.position.y = -PLATFORM_HEIGHT
+    const holder = new THREE.Group()
+    holder.add(content)
+    const figure = createDancer(holder, size.y, size.x)
+    figure.root.scale.setScalar(DANCER_FIGURE_HEIGHT / DANCER_HEIGHT)
+    figure.root.position.y = PLATFORM_HEIGHT
+    group.add(figure.root)
+    stack.rig.view = { lookY: 1.9, height: 1.6, distance: 8.2, sway: 1 }
+    stack.figure = figure
+    return stack
+  }
+
+  // A copy of the variant's model, or null while it loads (refreshStack
+  // runs again once it has).
+  function takeModelScene(variant: ModelVariant): THREE.Object3D | null {
+    const loaded = modelScenes[variant]
+    if (loaded) return loaded.clone(true)
+    if (!modelLoading.has(variant)) {
+      modelLoading.add(variant)
       new GLTFLoader().load(
-        systemMbUrl,
+        variant === 'painted' ? systemMbPaintedUrl : systemMbUrl,
         (gltf) => {
-          modelLoading = false
+          modelLoading.delete(variant)
           if (disposed) {
             disposeScene(gltf.scene as unknown as THREE.Scene)
             return
           }
-          model = buildModelStack(gltf.scene)
-          model.rig.group.visible = false
-          scene.add(model.rig.group)
-          for (const ring of model.rig.pressureRings) (ring.mesh.material as THREE.MeshBasicMaterial).color.setHex(palette.ring)
-          applyModelFinish(model)
-          setStack(wantedStack)
+          modelScenes[variant] = gltf.scene
+          refreshStack()
         },
         undefined,
         (error) => {
-          modelLoading = false
+          modelLoading.delete(variant)
           console.error('failed to load the Mais Baixo model', error)
         },
       )
     }
-    // Until the model has loaded (or if it failed), keep showing Classic.
-    const useModel = stackId === 'mb' && model !== null
-    const next = useModel && model ? model.rig : classicRig
+    return null
+  }
+
+  // Shows the stack the options ask for: Classic, or Mais Baixo — painted
+  // or plain (by the Colours option), standing or dancing (Mode).
+  function refreshStack() {
+    let next = classicRig
+    activeStack = null
+    if (wantedStack === 'mb') {
+      // Dancing is always the real rig (with its logo), as in the Mais
+      // Baixo games — repainted in the palette's colours, or its own under
+      // Original.
+      const variant: ModelVariant = appliedPaletteId === 'original' || wantedMode === 'dancing' ? 'painted' : 'plain'
+      const key = `${variant}|${wantedMode}`
+      let stack = modelStacks.get(key)
+      if (!stack) {
+        const root = takeModelScene(variant)
+        if (root) {
+          const built = wantedMode === 'dancing' ? buildDancer(root) : variant === 'painted' ? buildPaintedStack(root) : buildModelStack(root)
+          stack = addModelStack(built)
+          modelStacks.set(key, stack)
+        }
+      }
+      // Until the model has loaded (or if it failed), keep showing Classic.
+      if (stack) {
+        next = stack.rig
+        activeStack = stack
+      }
+    }
     if (next !== rig) {
       // The rig we're leaving was frozen mid-motion while hidden; start the
       // incoming one from rest so stale spring velocity and ring ages don't
@@ -1501,14 +1913,23 @@ function create(): ThemeInstance {
       bandAverages.fill(0)
     }
     rig = next
-    classicGroup.visible = !useModel
-    if (model) model.rig.group.visible = useModel
+    for (const r of rigs()) r.group.visible = r === rig
+  }
+
+  function addModelStack(stack: ModelStack): ModelStack {
+    stack.rig.group.visible = false
+    scene.add(stack.rig.group)
+    for (const ring of stack.rig.pressureRings) (ring.mesh.material as THREE.MeshBasicMaterial).color.setHex(palette.ring)
+    applyModelFinish(stack)
+    return stack
   }
 
   // --- Paint jobs --------------------------------------------------------
   // Textures are generated the first time a palette is used and cached for
   // the theme's lifetime, so flipping back and forth is instant.
   const textureCache = new Map<string, { map: THREE.Texture; bumpMap?: THREE.Texture }>()
+  // Walnut boards for the real rig, by seed (see paintRig).
+  const walnutCache = new Map<number, { map: THREE.Texture; roughness: THREE.Texture }>()
   function cached(key: string, build: () => { map: THREE.Texture; bumpMap?: THREE.Texture }) {
     let entry = textureCache.get(key)
     if (!entry) {
@@ -1551,7 +1972,8 @@ function create(): ThemeInstance {
       for (const ring of r.pressureRings) (ring.mesh.material as THREE.MeshBasicMaterial).color.setHex(palette.ring)
       for (const { material } of r.hornGlows) material.emissive.setHex(palette.glow)
     }
-    if (model) applyModelFinish(model)
+    for (const stack of modelStacks.values()) applyModelFinish(stack)
+    refreshStack()
   }
   setColours('app')
 
@@ -1568,8 +1990,14 @@ function create(): ThemeInstance {
   }
 
   function setOption(optionId: string, valueId: string) {
-    if (optionId === 'stack') setStack(valueId)
-    else if (optionId === 'colours') setColours(valueId)
+    if (optionId === 'stack') {
+      wantedStack = valueId
+      refreshStack()
+    } else if (optionId === 'mode') {
+      wantedMode = valueId
+      refreshStack()
+    }
+    if (optionId === 'colours') setColours(valueId)
     else if (optionId === 'background') setBackground(valueId)
   }
 
@@ -1687,6 +2115,8 @@ function create(): ThemeInstance {
       for (const { mesh, phase } of urban.flags) mesh.rotation.x = Math.sin(t * 1.6 + phase) * 0.35
     }
 
+    activeStack?.figure?.update(frame)
+
     // Slow, low, admiring camera — plus a thump on the kick.
     const jolt = kick * 0.03
     const { view } = rig
@@ -1719,6 +2149,10 @@ function create(): ThemeInstance {
       for (const { map, bumpMap } of textureCache.values()) {
         map.dispose()
         bumpMap?.dispose()
+      }
+      for (const { map, roughness } of walnutCache.values()) {
+        map.dispose()
+        roughness.dispose()
       }
     },
   }
