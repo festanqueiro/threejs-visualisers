@@ -7,10 +7,14 @@
 // anything under 15 fps. It only reports after two windows in a row with
 // at least half the frames late — a real, sustained struggle, not a busy
 // moment (loading a model, building a backdrop, a background tab waking).
-// Gaps over half a second are pauses (a hidden tab, a debugger), not
-// stutter, and are skipped. After a report or a reset() — a theme
-// switch or quality change, whose shader compiles hitch the first frames —
-// it waits out a grace period before judging again.
+// Gaps over two seconds are pauses (a hidden tab, a debugger), not
+// stutter, and are skipped; anything shorter is a frame, however late —
+// a theme too heavy for the GPU can take well over half a second a frame,
+// which is exactly when stepping down matters most. After a report or a
+// reset() — a theme switch or quality change, whose shader compiles hitch
+// the first frames — it waits out a grace period before judging again.
+const PAUSE_MS = 2000
+
 export class StutterDetector {
   private last: number | null = null
   private windowStart = 0
@@ -35,14 +39,15 @@ export class StutterDetector {
   frame(nowMs: number, targetMs: number): boolean {
     const interval = this.last === null ? Infinity : nowMs - this.last
     this.last = nowMs
-    if (interval > 500 || nowMs < this.graceUntil) {
+    if (interval > PAUSE_MS || nowMs < this.graceUntil) {
       this.startWindow(nowMs)
       return false
     }
     this.frames++
     if (interval > targetMs * 2) this.late++
     if (nowMs - this.windowStart < this.windowMs) return false
-    const bad = this.frames >= 10 && this.late / this.frames >= this.lateFraction
+    // A few frames are enough to judge: a window of very slow ones has few.
+    const bad = this.frames >= 4 && this.late / this.frames >= this.lateFraction
     this.startWindow(nowMs)
     this.badWindows = bad ? this.badWindows + 1 : 0
     if (this.badWindows < this.windowsNeeded) return false

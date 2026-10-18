@@ -58,6 +58,11 @@ describe('StutterDetector', () => {
     expect(run(detector, { start: end + 5000, seconds: 10, intervalMs: 1000 / 30 }).reports).toBe(0)
   })
 
+  it('reports a GPU too slow for even a few frames a second', () => {
+    // 600 ms a frame: under 2 fps, but frames all the same, not pauses.
+    expect(run(new StutterDetector(), { seconds: 15, intervalMs: 600 }).reports).toBeGreaterThan(0)
+  })
+
   it('reports at most once per window', () => {
     // 30 s of steady slowness: a report every few windows, not every frame.
     expect(run(new StutterDetector(), { seconds: 30, intervalMs: 85 }).reports).toBeLessThanOrEqual(3)

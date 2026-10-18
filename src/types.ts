@@ -55,6 +55,10 @@ export interface ThemeInstance {
   // starts and again on every change. Optional: resolution alone is
   // handled by the shell.
   setQuality?: (quality: VisualizerQuality) => void
+  // Renders at this fraction of the shell's resolution (default 1): for
+  // soft, costly full-screen shaders (Ocean), where every pixel saved
+  // counts and the upscale barely shows.
+  resolutionScale?: number
 }
 
 // A user-selectable setting a theme offers (e.g. Colours, Background),

@@ -10,8 +10,8 @@ import type { AudioFrame, ThemeInstance, ThemeOption, VisualizerQuality, Visuali
 // sun's path and breaks into whitecaps, and spray blows off the crests.
 //
 // Bass raises the swell and big kicks send a wave rolling in towards the
-// camera; mids make the sea choppier; highs set the glitter, the glints,
-// the foam; the music's energy speeds the sea up, and in loud passages
+// camera; mids make the sea choppier; highs set the glitter and the
+// foam; the music's energy speeds the sea up, and in loud passages
 // the camera rides down into the troughs. Each kick flares the sun — at
 // night it lights the foam up instead, and now and then sends a shooting
 // star across.
@@ -37,7 +37,6 @@ uniform float uChop;
 uniform vec4 uSwells[${MAX_SWELLS}];
 uniform float uTop;
 uniform float uGlitter;
-uniform float uGlints;
 uniform float uFoam;
 uniform float uSunBoost;
 uniform float uStars;
@@ -115,12 +114,6 @@ float heightAt(vec2 p, int count) {
   return (waves(p, count) - 1.0) * uSwell + swells(p);
 }
 
-float hash31(vec3 p) {
-  p = fract(p * 0.1031);
-  p += dot(p, p.zyx + 31.32);
-  return fract((p.x + p.y) * p.z);
-}
-
 vec3 normalAt(vec2 p, float dist) {
   // Wider differences further away, so distant water doesn't sparkle
   // with detail smaller than a pixel.
@@ -186,7 +179,7 @@ vec3 sky(vec3 rd, vec3 ro, bool clouds, float starGain) {
   col += uSunColor * (pow(s, 8.0) * 0.12 + pow(s, 120.0) * 0.25) * uSunBoost;
   col += uSunColor * smoothstep(uSunSize, uSunSize + 0.00025, s) * uDisc * uSunBoost;
 
-  if (uStars > 0.0 && rd.y > 0.0) {
+  if (uStars > 0.0 && starGain > 0.0 && rd.y > 0.0) {
     // Thinned out low down, where there's more air to look through.
     float clear = smoothstep(0.0, 0.3, rd.y) * uStars * starGain;
     float milky = galaxy(rd);
@@ -276,12 +269,6 @@ vec3 water(vec3 p, vec3 n, vec3 rd, vec3 ro, float dist) {
   float sr = max(dot(r, uSunDir), 0.0);
   col += uSunColor * (pow(sr, 1400.0) * 8.0 + pow(sr, 160.0) * 0.15) * uGlitter;
 
-  // Glints: single facets catching the light for an instant, scattered
-  // along the sun's path — they come and go with the hi-hats.
-  vec3 cell = floor(vec3(p.x * 5.0, uClock * 9.0, p.z * 5.0));
-  float glint = step(0.993, hash31(cell)) * pow(sr, 24.0) * smoothstep(250.0, 20.0, dist);
-  col += uSunColor * glint * uGlints * 1.5;
-
   // Whitecaps: streaky foam on the highest crests.
   float streaks = fbm(p.xz * vec2(0.35, 0.9) + vec2(0.0, uTime * 0.15));
   float foam = clamp(smoothstep(0.9 - uFoam, 1.0, crest) * smoothstep(0.35, 0.7, streaks), 0.0, 1.0);
@@ -301,7 +288,8 @@ void main() {
   vec3 rd = uCamTurn * normalize(vec3(uv, -${FOCAL.toFixed(2)}));
 
   // What the air looks like towards the horizon in this direction.
-  vec3 haze = sky(normalize(vec3(rd.x, 0.002, rd.z)), ro, false, 1.0);
+  // (No stars: they'd be thinned to nothing this low, at full cost.)
+  vec3 haze = sky(normalize(vec3(rd.x, 0.002, rd.z)), ro, false, 0.0);
 
   vec3 col;
   if (rd.y >= 0.0) {
@@ -467,9 +455,9 @@ const GRADES: Record<string, number> = { colour: 0, sepia: 1, mono: 2 }
 
 // Shader defines per quality level (the Visualizer's global setting).
 const QUALITY: Record<VisualizerQuality, Record<string, number | string>> = {
-  high: { MARCH_STEPS: 64, MARCH_WAVES: 10, DETAIL_WAVES: 28, REFLECT_CLOUDS: 1, REFINE: 0, NORMAL_E: '0.02' },
-  hd: { MARCH_STEPS: 120, MARCH_WAVES: 14, DETAIL_WAVES: 44, REFLECT_CLOUDS: 1, REFINE: 6, NORMAL_E: '0.008' },
-  low: { MARCH_STEPS: 36, MARCH_WAVES: 7, DETAIL_WAVES: 16, REFLECT_CLOUDS: 0, REFINE: 0, NORMAL_E: '0.03' },
+  high: { MARCH_STEPS: 44, MARCH_WAVES: 8, DETAIL_WAVES: 20, REFLECT_CLOUDS: 1, REFINE: 0, NORMAL_E: '0.02' },
+  hd: { MARCH_STEPS: 72, MARCH_WAVES: 10, DETAIL_WAVES: 30, REFLECT_CLOUDS: 1, REFINE: 4, NORMAL_E: '0.012' },
+  low: { MARCH_STEPS: 28, MARCH_WAVES: 6, DETAIL_WAVES: 12, REFLECT_CLOUDS: 0, REFINE: 0, NORMAL_E: '0.03' },
 }
 
 const OPTIONS: ThemeOption[] = [
@@ -546,7 +534,6 @@ function create(): ThemeInstance {
     uSwells: { value: swellUniforms },
     uTop: { value: 0 },
     uGlitter: { value: 1 },
-    uGlints: { value: 0 },
     uFoam: { value: 0.1 },
     uSunBoost: { value: 1 },
     uStars: { value: 0 },
@@ -711,7 +698,6 @@ function create(): ThemeInstance {
     uniforms.uChop.value = 0.22 + chop * 0.5
     uniforms.uFoam.value = 0.05 + foam * 0.45 + flash * 0.08
     uniforms.uGlitter.value = 0.6 + high * 0.6 + flash * 0.25
-    uniforms.uGlints.value = high * 1.5 + flash * 0.5
     uniforms.uSunBoost.value = 1 + bass * 0.1 + flash * 0.2
     // Fog breathes: it thins a little when the music swells.
     uniforms.uFog.value = sky.fog * (1.15 - energy * 0.4)
@@ -821,6 +807,9 @@ function create(): ThemeInstance {
     camera,
     update,
     toneMapping: THREE.ACESFilmicToneMapping,
+    // Every pixel raymarches the sea: drawn at half the resolution (a
+    // quarter of the pixels), which the soft water and sky barely show.
+    resolutionScale: 0.5,
     dispose: () => disposeScene(scene),
     setOption: (optionId, valueId) => {
       if (optionId === 'sky') setSky(valueId)
