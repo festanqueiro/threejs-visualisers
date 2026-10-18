@@ -51,12 +51,16 @@ export class VisualizerEngine {
   private previousFreq: Uint8Array<ArrayBuffer> = new Uint8Array(0)
   private tempo = new TempoTracker()
   private lastMs = performance.now()
+  // As asked for (setPixelRatio); the renderer gets it scaled by the
+  // theme's resolutionScale.
+  private pixelRatio: number
 
   constructor(options: { width: number; height: number; pixelRatio?: number; analyser?: AnalyserSource }) {
     const { width, height, pixelRatio = 1 } = options
     this.width = width
     this.height = height
     this.analyser = options.analyser ?? null
+    this.pixelRatio = pixelRatio
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
     renderer.setPixelRatio(pixelRatio)
     renderer.setSize(width, height)
@@ -96,10 +100,18 @@ export class VisualizerEngine {
     this.fitCamera()
   }
 
-  // Resolution, as a multiple of CSS pixels.
+  // Resolution, as a multiple of CSS pixels. A theme with a
+  // resolutionScale renders at that fraction of it.
   setPixelRatio(pixelRatio: number): void {
-    this.renderer.setPixelRatio(pixelRatio)
-    this.composer.setPixelRatio(pixelRatio)
+    this.pixelRatio = pixelRatio
+    this.applyPixelRatio()
+  }
+
+  private applyPixelRatio(): void {
+    const ratio = this.pixelRatio * (this.theme?.resolutionScale ?? 1)
+    if (ratio === this.renderer.getPixelRatio()) return
+    this.renderer.setPixelRatio(ratio)
+    this.composer.setPixelRatio(ratio)
   }
 
   // Passes the quality on to the active theme (and to every theme set
@@ -114,6 +126,7 @@ export class VisualizerEngine {
   setTheme(instance: ThemeInstance): void {
     this.theme = instance
     instance.setQuality?.(this.quality)
+    this.applyPixelRatio()
     this.renderer.shadowMap.enabled = !!instance.shadows
     this.renderer.toneMapping = instance.toneMapping ?? THREE.NoToneMapping
     this.renderPass.scene = instance.scene
